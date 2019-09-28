@@ -475,8 +475,8 @@ export class PdfViewerDocument extends LitElement {
         // Convert the number of pages into an array of [1,..., pages]
         const pages = this.pages > 0 ? Array.apply(null, Array(this.pages)).map((_, n) => n + 1) : undefined;
 
-        const pdf: ParentPdfDocument = this._PDF ? {
-            document: this._PDF,
+        const pdf: ParentPdfDocument = this.pdfProxy ? {
+            document: this.pdfProxy,
             source: this._src
         } : undefined;
 
@@ -485,7 +485,7 @@ export class PdfViewerDocument extends LitElement {
         return html`
 <div id="container">
     <div id="viewer" class="viewer">
-        ${pages && this._PDF ? pages.map(p => html`
+        ${pages && this.pdfProxy ? pages.map(p => html`
         <pdf-viewer-page
             page=${p}
             zoom=${this._zoom}
@@ -502,8 +502,6 @@ export class PdfViewerDocument extends LitElement {
     }
 
     private _src: string;
-    private _page: number;
-    //  private _mode: 'single' | 'double' = 'single';
 
     /** URL of the PDF file to display. */
     @property()
@@ -514,24 +512,6 @@ export class PdfViewerDocument extends LitElement {
 
         this._src = s;
         this.srcChanged(this._src);
-    }
-
-    /** The page number to display.
-     * The first page is 1 */
-    @property({ reflect: true, type: Number })
-    get page(): number { return this._page; };
-    set page(p: number) {
-        if (this._page === p)
-            return;
-
-        // If past last page then last page, if less than 1 then 1, otherwise set
-        const validated = p > this.pages ? this.pages : p < 1 ? 1 : p;
-        if (this._page === validated)
-            return;
-
-        // If past last page then last page, if less than 1 then 1, otherwise set
-        this._page = validated;
-        //this._drawPage(this._page);
     }
 
     /** Total number of pages in the document, set by parsing the src. */
@@ -548,14 +528,6 @@ export class PdfViewerDocument extends LitElement {
     @property({ attribute: 'zoom-ratio', type: Number })
     zoomRatio: number = 1.25;
 
-    /** Internal PDF object. */
-    private _PDF: PDFDocumentProxy;
-
-
-    private _trackPos: { x: number, y: number };
-
-    private _pos: { x: number, y: number } = ({ x: 0, y: 0 });
-
     @property({ type: Number })
     private _zoom: number = 1;
 
@@ -564,6 +536,9 @@ export class PdfViewerDocument extends LitElement {
 
     @query('#container')
     private container: HTMLDivElement;
+
+    /** Internal PDF object. */
+    private pdfProxy: PDFDocumentProxy;
 
     //connectedCallback() {
     //    super.connectedCallback()
@@ -579,29 +554,32 @@ export class PdfViewerDocument extends LitElement {
             return; // not loaded yet, defer until it has
 
         // Clear the pages and document proxy
-        this._page = undefined;
         this.pages = undefined;
-        this._PDF = undefined;
+        this.pdfProxy = undefined;
 
         if (!src || !navigator.onLine)
             return;
+
+        this.dispatchEvent(new CustomEvent<{ src: string }>(
+            'pdf-document-loading', {
+                detail: { src: src },
+            }));
 
         // Loaded via <script> tag, create shortcut to access PDF.js exports.
         const pdfjsLib = await pdfApi();
 
         const pdf = await pdfjsLib.getDocument(src);
-        this._PDF = pdf;
+        this.pdfProxy = pdf;
 
         if (src !== this.src)
             return; // fake cancel
 
-        this.pages = this._PDF.numPages;
-        this.page = 1;
+        this.pages = this.pdfProxy.numPages;
 
         this.dispatchEvent(new CustomEvent<{ src: string }>(
-            'pdf-viewer-loaded', {
+            'pdf-document-loaded', {
                 detail: { src: src },
-            }))
+            }));
     }
 
     async updateFit(fitMode: 'height' | 'width') {
@@ -612,7 +590,8 @@ export class PdfViewerDocument extends LitElement {
 
     /** Display the document full width */
     private async fitWidth() {
-        const page = await this._PDF.getPage(1);
+        this.fit = 'width';
+        const page = await this.pdfProxy.getPage(1);
 
         const viewport = page.getViewport({ scale: 1 });
         const rect = this.container.getBoundingClientRect();
@@ -628,8 +607,8 @@ export class PdfViewerDocument extends LitElement {
 
     /** Display the whole page */
     private async fitHeight() {
-        const pageNum = this.page || 1;
-        const page = await this._PDF.getPage(1);
+        this.fit = 'height';
+        const page = await this.pdfProxy.getPage(1);
 
         const viewport = page.getViewport({ scale: 1 });
         const rect = this.container.getBoundingClientRect();
@@ -641,7 +620,6 @@ export class PdfViewerDocument extends LitElement {
             return;
 
         this._zoom = zoom;
-        this.page = pageNum;
     }
 
     /** Zoom in */

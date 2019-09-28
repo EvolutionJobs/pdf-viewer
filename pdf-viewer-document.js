@@ -455,21 +455,20 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         super(...arguments);
         this.fit = 'height';
         this.zoomRatio = 1.25;
-        this._pos = ({ x: 0, y: 0 });
         this._zoom = 1;
     }
     static get styles() { return [styles, viewerCss]; }
     render() {
         const pages = this.pages > 0 ? Array.apply(null, Array(this.pages)).map((_, n) => n + 1) : undefined;
-        const pdf = this._PDF ? {
-            document: this._PDF,
+        const pdf = this.pdfProxy ? {
+            document: this.pdfProxy,
             source: this._src
         } : undefined;
         const hl = [...normaliseSearchTerms(this.highlight)];
         return html `
 <div id="container">
     <div id="viewer" class="viewer">
-        ${pages && this._PDF ? pages.map(p => html `
+        ${pages && this.pdfProxy ? pages.map(p => html `
         <pdf-viewer-page
             page=${p}
             zoom=${this._zoom}
@@ -491,32 +490,23 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         this._src = s;
         this.srcChanged(this._src);
     }
-    get page() { return this._page; }
-    ;
-    set page(p) {
-        if (this._page === p)
-            return;
-        const validated = p > this.pages ? this.pages : p < 1 ? 1 : p;
-        if (this._page === validated)
-            return;
-        this._page = validated;
-    }
     async srcChanged(src) {
         if (!this.container)
             return;
-        this._page = undefined;
         this.pages = undefined;
-        this._PDF = undefined;
+        this.pdfProxy = undefined;
         if (!src || !navigator.onLine)
             return;
+        this.dispatchEvent(new CustomEvent('pdf-document-loading', {
+            detail: { src: src },
+        }));
         const pdfjsLib = await pdfApi();
         const pdf = await pdfjsLib.getDocument(src);
-        this._PDF = pdf;
+        this.pdfProxy = pdf;
         if (src !== this.src)
             return;
-        this.pages = this._PDF.numPages;
-        this.page = 1;
-        this.dispatchEvent(new CustomEvent('pdf-viewer-loaded', {
+        this.pages = this.pdfProxy.numPages;
+        this.dispatchEvent(new CustomEvent('pdf-document-loaded', {
             detail: { src: src },
         }));
     }
@@ -527,7 +517,8 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
             this.fitHeight();
     }
     async fitWidth() {
-        const page = await this._PDF.getPage(1);
+        this.fit = 'width';
+        const page = await this.pdfProxy.getPage(1);
         const viewport = page.getViewport({ scale: 1 });
         const rect = this.container.getBoundingClientRect();
         const width = Math.min(screen.width, window.innerWidth, rect.width);
@@ -537,8 +528,8 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         this._zoom = zoom;
     }
     async fitHeight() {
-        const pageNum = this.page || 1;
-        const page = await this._PDF.getPage(1);
+        this.fit = 'height';
+        const page = await this.pdfProxy.getPage(1);
         const viewport = page.getViewport({ scale: 1 });
         const rect = this.container.getBoundingClientRect();
         const height = Math.min(screen.height, window.innerHeight, rect.height);
@@ -546,7 +537,6 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         if (zoom === this._zoom)
             return;
         this._zoom = zoom;
-        this.page = pageNum;
     }
     zoomin() {
         this._zoom = this._zoom * this.zoomRatio;
@@ -558,9 +548,6 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
 __decorate([
     property()
 ], PdfViewerDocument.prototype, "src", null);
-__decorate([
-    property({ reflect: true, type: Number })
-], PdfViewerDocument.prototype, "page", null);
 __decorate([
     property({ reflect: true, type: Number })
 ], PdfViewerDocument.prototype, "pages", void 0);

@@ -4,6 +4,7 @@ import { PdfViewerDocument } from './pdf-viewer-document';
 import '../../lib/@polymer/paper-icon-button/paper-icon-button.js';
 import '../../lib/@polymer/iron-icons/iron-icons.js';
 import '../../lib/@polymer/paper-tooltip/paper-tooltip.js';
+import { ifDefined } from '../../lib/lit-html/directives/if-defined.js';
 
 const styles = css`
 :host {
@@ -14,12 +15,17 @@ const styles = css`
 }
 
 #actions {
+    display: none;
     position: absolute;
     bottom: 0;
     right: 24px;
     width: min-content;
     height: min-content;
 }
+
+    #actions.loaded {
+        display: block;
+    }
 
 paper-icon-button {
     --iron-icon-height: 20px;
@@ -56,9 +62,11 @@ export class PdfViewer extends LitElement {
         return html`
 <pdf-viewer-document
     .src=${this.src} 
-    .highlight=${this.highlight}></pdf-viewer-document>
+    .highlight=${this.highlight}
+    @pdf-document-loading=${e => this.loaded = false}
+    @pdf-document-loaded=${ e => this.loaded = true}></pdf-viewer-document>
 
-<div id="actions">
+<div id="actions" class=${ifDefined(this.loaded ? 'loaded' : undefined)}>
     <paper-icon-button icon="launch" id="actionExpand"
         @tap=${this.expandFull}></paper-icon-button>
     <paper-tooltip for="actionExpand" position="left" animation-delay="0">
@@ -95,6 +103,9 @@ export class PdfViewer extends LitElement {
 
     @property()
     private fitMode: 'height' | 'width' | 'custom';
+
+    @property()
+    private loaded: boolean;
 
     /** Document control used to render the PDF */
     @query('pdf-viewer-document')
