@@ -1,9 +1,6 @@
 ﻿import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
-//import '../../lib/pdfjs-dist/build/pdf.worker.min.js';
-//import '../../lib/pdfjs-dist/build/pdf.js';
 import { PDFDocumentProxy, PDFRenderTask } from './pdf'; // Definitions only
 import '../../lib/@polymer/paper-spinner/paper-spinner.js';
-import { PaperSpinnerElement } from '../../lib/@polymer/paper-spinner/paper-spinner';
 import { pdfApi } from './pdf-utility.js';
 import  './pdf-viewer-page.js';
 import { ParentPdfDocument } from './pdf-viewer-page';
@@ -454,8 +451,8 @@ function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
                 yield i;
 }
 
-@customElement('pdf-viewer')
-export class PdfViewer extends LitElement {
+@customElement('pdf-viewer-document')
+export class PdfViewerDocument extends LitElement {
 
     static get styles() { return [styles, viewerCss]; }
 
@@ -579,41 +576,6 @@ export class PdfViewer extends LitElement {
 
     @query('#container')
     private container: HTMLDivElement;
-
-    //@query('#viewer')
-    //private viewer: HTMLDivElement;
-
-    //@query('#viewer1')
-    //private page1canvas: HTMLCanvasElement;
-
-    //@query('#viewer2')
-    //private page2canvas: HTMLCanvasElement;
-
-    //@query('#spinner')
-    //private spinner: PaperSpinnerElement;
-
-    //static get properties() {
-    //    return {
-
-    //        /**
-    //         * import error message for translation
-    //         */
-    //        errorMessage: {
-    //            type: String,
-    //            value: 'Error loading the pdf file',
-    //        },
-    //        errorBtnLabel: {
-    //            type: String,
-    //            value: 'Close',
-    //        },
-    //    }
-    //}
-
-    //constructor() {
-    //    super()
-    //    this.PDFJS = pdfjsDistBuildPdf;
-    //    this.PDFJS.GlobalWorkerOptions.workerSrc = this.PDFJS_workerSrc
-    //}
 
     connectedCallback() {
         super.connectedCallback()

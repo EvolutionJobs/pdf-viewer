@@ -450,7 +450,7 @@ function* normaliseSearchTerms(input) {
             else if (i instanceof RegExp)
                 yield i;
 }
-let PdfViewer = class PdfViewer extends LitElement {
+let PdfViewerDocument = class PdfViewerDocument extends LitElement {
     constructor() {
         super(...arguments);
         this.fit = 'height';
@@ -651,30 +651,30 @@ let PdfViewer = class PdfViewer extends LitElement {
 };
 __decorate([
     property()
-], PdfViewer.prototype, "src", null);
+], PdfViewerDocument.prototype, "src", null);
 __decorate([
     property({ reflect: true, type: Number })
-], PdfViewer.prototype, "page", null);
+], PdfViewerDocument.prototype, "page", null);
 __decorate([
     property({ reflect: true, type: Number })
-], PdfViewer.prototype, "pages", void 0);
+], PdfViewerDocument.prototype, "pages", void 0);
 __decorate([
     property()
-], PdfViewer.prototype, "fit", void 0);
+], PdfViewerDocument.prototype, "fit", void 0);
 __decorate([
     property({ attribute: 'zoom-ratio', type: Number })
-], PdfViewer.prototype, "zoomRatio", void 0);
+], PdfViewerDocument.prototype, "zoomRatio", void 0);
 __decorate([
     property({ type: Number })
-], PdfViewer.prototype, "_zoom", void 0);
+], PdfViewerDocument.prototype, "_zoom", void 0);
 __decorate([
     property()
-], PdfViewer.prototype, "highlight", void 0);
+], PdfViewerDocument.prototype, "highlight", void 0);
 __decorate([
     query('#container')
-], PdfViewer.prototype, "container", void 0);
-PdfViewer = __decorate([
-    customElement('pdf-viewer')
-], PdfViewer);
-export { PdfViewer };
-//# sourceMappingURL=pdf-viewer.js.map
+], PdfViewerDocument.prototype, "container", void 0);
+PdfViewerDocument = __decorate([
+    customElement('pdf-viewer-document')
+], PdfViewerDocument);
+export { PdfViewerDocument };
+//# sourceMappingURL=pdf-viewer-document.js.map
