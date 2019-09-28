@@ -18,6 +18,10 @@ const styles = css `
     position: relative;
 }
 
+pdf-viewer-document {
+    flex: 1;
+}
+
 #actions {
     display: none;
     position: absolute;
