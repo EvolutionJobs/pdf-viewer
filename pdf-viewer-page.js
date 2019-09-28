@@ -22,7 +22,25 @@ const styles = css `
         rgba(0, 0, 0, 0.14) 0px 4px 5px 0px, 
         rgba(0, 0, 0, 0.12) 0px 1px 10px 0px, 
         rgba(0, 0, 0, 0.4) 0px 2px 4px -1px;
+
+
 }
+
+.term {
+    border-radius: 2px;
+    padding: 0 2px;
+    margin-left: -2px;
+}
+
+    .term.term-0 { background: var(--pdf-colour-1, #f00); }
+    .term.term-1 { background: var(--pdf-colour-2, #0f0); }
+    .term.term-2 { background: var(--pdf-colour-3, #00f); }
+    .term.term-3 { background: var(--pdf-colour-4, #fd0); }
+    .term.term-4 { background: var(--pdf-colour-5, #0fd); }
+    .term.term-5 { background: var(--pdf-colour-6, #d0f); }
+    .term.term-6 { background: var(--pdf-colour-7, #df0); }
+    .term.term-7 { background: var(--pdf-colour-8, #0df); }
+
 `;
 const viewerCss = css `
 .textLayer {
@@ -91,6 +109,7 @@ const viewerCss = css `
     .textLayer .endOfContent.active {
         top: 0px;
     }`;
+const termMaxOrdinal = 8;
 function clearCanvas(canvas) {
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -104,25 +123,26 @@ const obs = new IntersectionObserver(eles => {
     for (const e of eles)
         e.target.shown = e.isIntersecting;
 });
-function injectHighlight(element, highlight) {
-    if (element.childNodes)
-        for (const child of [...element.childNodes]) {
-            if (child.nodeType === Node.TEXT_NODE) {
-                const text = child.textContent;
-                const match = highlight.exec(text);
-                if (match) {
-                    const found = match[0];
-                    const before = document.createTextNode(text.substring(0, match.index));
-                    const hl = document.createElement('span');
-                    hl.textContent = found;
-                    hl.className = 'highlight';
-                    const after = document.createTextNode(text.substring(match.index + found.length));
-                    child.replaceWith(before, hl, after);
-                }
+function injectHighlight(element, highlight, ordinal) {
+    if (!element.childNodes)
+        return;
+    for (const child of [...element.childNodes]) {
+        if (child.nodeType === Node.TEXT_NODE) {
+            const text = child.textContent;
+            const match = highlight.exec(text);
+            if (match) {
+                const found = match[0];
+                const before = document.createTextNode(text.substring(0, match.index));
+                const hl = document.createElement('span');
+                hl.textContent = found;
+                hl.className = `term term-${ordinal % termMaxOrdinal}`;
+                const after = document.createTextNode(text.substring(match.index + found.length));
+                child.replaceWith(before, hl, after);
             }
-            else
-                injectHighlight(child, highlight);
         }
+        else
+            injectHighlight(child, highlight, ordinal);
+    }
 }
 let PdfViewerPage = class PdfViewerPage extends LitElement {
     constructor() {
@@ -130,9 +150,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         this.pageNumber = 1;
         this.zoom = 1;
     }
-    static get styles() {
-        return [styles, viewerCss];
-    }
+    static get styles() { return [styles, viewerCss]; }
     render() {
         this.debouncePdfRender();
         return html `
@@ -167,6 +185,8 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
     async startRender() {
         if (!this.shown)
             return;
+        if (!this.pdf)
+            return;
         if (this.loading)
             await this.loading;
         while (!this.canvas)
@@ -176,11 +196,9 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
     async renderPage(view, textLayer, pageNumber, highlight) {
         clearCanvas(view);
         clearDom(textLayer);
-        if (!this.pdf)
-            return;
         if (!this.api)
             this.api = await pdfApi();
-        console.time(`Rendering page ${pageNumber}`);
+        console.time(`📃 Rendering page ${pageNumber}`);
         try {
             const page = await this.pdf.document.getPage(pageNumber);
             const viewport = page.getViewport({ scale: this.zoom });
@@ -200,8 +218,8 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
                 textDivs: [],
             });
             await new Promise(requestAnimationFrame);
-            const hl = new RegExp(highlight, 'gi');
-            injectHighlight(textLayer, hl);
+            for (let i = 0; i < highlight.length; i++)
+                injectHighlight(textLayer, highlight[i], i);
         }
         catch (ex) {
             const context = view.getContext('2d');
@@ -211,7 +229,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         finally {
             this.loading = undefined;
         }
-        console.timeEnd(`Rendering page ${pageNumber}`);
+        console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }
 };
 __decorate([

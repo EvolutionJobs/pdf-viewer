@@ -21,7 +21,25 @@ const styles = css`
         rgba(0, 0, 0, 0.14) 0px 4px 5px 0px, 
         rgba(0, 0, 0, 0.12) 0px 1px 10px 0px, 
         rgba(0, 0, 0, 0.4) 0px 2px 4px -1px;
+
+
 }
+
+.term {
+    border-radius: 2px;
+    padding: 0 2px;
+    margin-left: -2px;
+}
+
+    .term.term-0 { background: var(--pdf-colour-1, #f00); }
+    .term.term-1 { background: var(--pdf-colour-2, #0f0); }
+    .term.term-2 { background: var(--pdf-colour-3, #00f); }
+    .term.term-3 { background: var(--pdf-colour-4, #fd0); }
+    .term.term-4 { background: var(--pdf-colour-5, #0fd); }
+    .term.term-5 { background: var(--pdf-colour-6, #d0f); }
+    .term.term-6 { background: var(--pdf-colour-7, #df0); }
+    .term.term-7 { background: var(--pdf-colour-8, #0df); }
+
 `;
 
 /** Import into constructible stylesheet from lib/pdfjs-dist/web/pdf_viewer.css
@@ -94,6 +112,9 @@ const viewerCss = css`
         top: 0px;
     }`;
 
+/** Hold the max number of terms that have defined styles, more than this loops. */
+const termMaxOrdinal = 8;
+
 /** Represent the parent document this is a page of */
 export interface ParentPdfDocument {
     /** The parsed document proxy */
@@ -123,35 +144,36 @@ const obs = new IntersectionObserver(eles => {
         (e.target as any).shown = e.isIntersecting;
 });
 
-function injectHighlight(element: ChildNode, highlight: RegExp) {
-    if (element.childNodes)
-        for (const child of [...element.childNodes]) {
-            if (child.nodeType === Node.TEXT_NODE) {
-                const text = child.textContent;
-                const match = highlight.exec(text);
-                if (match) {
-                    const found = match[0];
-                    const before = document.createTextNode(text.substring(0, match.index));
-                    const hl = document.createElement('span');
-                    hl.textContent = found;
-                    hl.className = 'highlight';
-                    const after = document.createTextNode(text.substring(match.index + found.length));
+function injectHighlight(element: ChildNode, highlight: RegExp, ordinal: number) {
+    if (!element.childNodes)
+        return;
 
-                    child.replaceWith(before, hl, after);
-                }
+    for (const child of [...element.childNodes]) {
+        if (child.nodeType === Node.TEXT_NODE) {
+            const text = child.textContent;
+            const match = highlight.exec(text);
+            if (match) {
+                const found = match[0];
+                const before = document.createTextNode(text.substring(0, match.index));
+                const hl = document.createElement('span');
+                hl.textContent = found;
+                hl.className = `term term-${ordinal % termMaxOrdinal}`;
+                const after = document.createTextNode(text.substring(match.index + found.length));
+
+                child.replaceWith(before, hl, after);
             }
-            else injectHighlight(child, highlight);
         }
+        else injectHighlight(child, highlight, ordinal);
+    }
 }
 
 @customElement('pdf-viewer-page')
 export class PdfViewerPage extends LitElement {
-    static get styles() {
-        return [styles, viewerCss];
-    }
+
+    static get styles() { return [styles, viewerCss]; }
 
     render() {
-        this.debouncePdfRender();
+        this.debouncePdfRender(); // Queue a rerender of the PDF to canvas
 
         return html`
 <canvas width="612" height="792"></canvas>
@@ -166,8 +188,9 @@ export class PdfViewerPage extends LitElement {
     @property({ type: Number })
     zoom: number = 1;
 
+    /** Parent PDF normalises the patterns to search for, this can't be passed as attribute. */
     @property()
-    highlight: string;
+    highlight: RegExp[];
 
     _shown: boolean;
     get shown(): boolean { return this._shown; };
@@ -182,7 +205,7 @@ export class PdfViewerPage extends LitElement {
         if (s) this.debouncePdfRender(); // If true queue a render
     };
 
-    /** Internal PDF object, can't be passed as attribute */
+    /** Internal PDF object, can't be passed as attribute. */
     @property()
     pdf: ParentPdfDocument;
 
@@ -210,15 +233,14 @@ export class PdfViewerPage extends LitElement {
 
     /** If visible queue the PDF render, with a debounce */
     private async debouncePdfRender() {
-        if (!this.shown)
-            return;
-
-        setTimeout(() => this.startRender(), 50);
+        if (!this.shown) return;  // Not visible
+        setTimeout(() => this.startRender(), 50); // Wait 50ms, so changes in quick succession don't queue renders
     }
 
+    /** Start a new render, with a check that the page is visible and that any other render has finished */
     private async startRender() {
-        if (!this.shown)
-            return;
+        if (!this.shown) return; // Not visible
+        if (!this.pdf) return;   // No PDF to render
 
         // If already rendering wait for it to finish (we can't cancel)
         if (this.loading)
@@ -231,15 +253,14 @@ export class PdfViewerPage extends LitElement {
         this.loading = this.renderPage(this.canvas, this.textLayer, this.pageNumber, this.highlight);
     }
 
-    private async renderPage(view: HTMLCanvasElement, textLayer: HTMLDivElement, pageNumber: number, highlight: string) {
-        
+    private async renderPage(view: HTMLCanvasElement, textLayer: HTMLDivElement, pageNumber: number, highlight: RegExp[]) {
+
         clearCanvas(view);      // clear the canvas
         clearDom(textLayer);    // clear the text overlay
 
-        if (!this.pdf) return;  // No PDF to render
         if (!this.api) this.api = await pdfApi(); // First time await getting the API
 
-        console.time(`Rendering page ${pageNumber}`);
+        console.time(`📃 Rendering page ${pageNumber}`);
 
         try {
             // Get the page from the document
@@ -268,16 +289,18 @@ export class PdfViewerPage extends LitElement {
 
             // Wait a frame for the DOM to update 
             await new Promise(requestAnimationFrame);
-            const hl = new RegExp(highlight, 'gi');
-            injectHighlight(textLayer, hl);
+
+            // Apply transparent highlights to the text overlay
+            for (let i = 0; i < highlight.length; i++)
+                injectHighlight(textLayer, highlight[i], i);
         }
         catch (ex) {
             const context = view.getContext('2d');
             context.clearRect(0, 0, view.width, view.height);
             throw ex;
         }
-        finally { this.loading = undefined; }
+        finally { this.loading = undefined; } // Always clear the loading promise
 
-        console.timeEnd(`Rendering page ${pageNumber}`);
+        console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }
 }

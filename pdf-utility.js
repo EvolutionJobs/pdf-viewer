@@ -1,4 +1,5 @@
 ﻿const pdfApiUri = `lib/pdfjs-dist/build/pdf.min.js`;
+const pdfWorkerUri = `lib/pdfjs-dist/build/pdf.worker.min.js`;
 let pdfApiLoading = false;
 let pdfApiReady;
 function loadScript(uri) {
@@ -21,12 +22,13 @@ export async function pdfApi() {
     try {
         pdfApiLoading = true;
         console.log('📃 PDF API loading...');
+        console.time('📃 PDF API loaded.');
         await loadScript(pdfApiUri);
         while (!window.pdfjsLib)
             await new Promise(requestAnimationFrame);
         pdfApiReady = window.pdfjsLib;
-        pdfApiReady.GlobalWorkerOptions.workerSrc = 'lib/pdfjs-dist/build/pdf.worker.min.js';
-        console.log('📃 PDF API loaded.');
+        pdfApiReady.GlobalWorkerOptions.workerSrc = pdfWorkerUri;
+        console.timeEnd('📃 PDF API loaded.');
     }
     finally {
         pdfApiLoading = false;

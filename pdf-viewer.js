@@ -438,6 +438,18 @@ const viewerCss = css `
   margin-bottom: 100%;
   border: 0;
 }`;
+function* normaliseSearchTerms(input) {
+    if (typeof input === 'string')
+        yield new RegExp(input, 'gi');
+    else if (input instanceof RegExp)
+        yield input;
+    else
+        for (const i of input)
+            if (typeof i === 'string')
+                yield new RegExp(i, 'gi');
+            else if (i instanceof RegExp)
+                yield i;
+}
 let PdfViewer = class PdfViewer extends LitElement {
     constructor() {
         super(...arguments);
@@ -454,6 +466,7 @@ let PdfViewer = class PdfViewer extends LitElement {
             document: this._PDF,
             source: this._src
         } : undefined;
+        const hl = [...normaliseSearchTerms(this.highlight)];
         return html `
 <div id="container" 
     @track=${this._handleTrack}>
@@ -462,7 +475,7 @@ let PdfViewer = class PdfViewer extends LitElement {
         <pdf-viewer-page
             page=${p}
             zoom=${this._zoom}
-            highlight=${this.highlight}
+            .highlight=${hl}
             .pdf=${pdf}></pdf-viewer-page>`) : html `
         <paper-spinner id="spinner" active></paper-spinner>`}
     </div>
