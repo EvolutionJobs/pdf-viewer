@@ -451,6 +451,21 @@ function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
                 yield i;
 }
 
+/** Render a PDF document a canvas elements in the page.
+ *  No UI provided, just display of the document.
+ *  Each page is rendered by <pdf-viewer-page>, which uses an IntersectionObserver to only render visible pages.
+ *  Styles: 
+ *       --pdf-background, default: #888, content behind pages.
+ *       --pdf-paper, default: #fff, colour of each page (overriden by canvas content).
+ *       --pdf-colour-1, default: #f00, colour for 1st term highlight.
+ *       --pdf-colour-2, default: #0f0, colour for 2nd term highlight.
+ *       --pdf-colour-3, default: #00f, colour for 3rd term highlight.
+ *       --pdf-colour-4, default: #fd0, colour for 4th term highlight.
+ *       --pdf-colour-5, default: #0fd, colour for 5th term highlight.
+ *       --pdf-colour-6, default: #d0f, colour for 6th term highlight.
+ *       --pdf-colour-7, default: #df0, colour for 7th term highlight.
+ *       --pdf-colour-8, default: #0df, colour for 8th term highlight. (subsequent terms repeat)
+ * */
 @customElement('pdf-viewer-document')
 export class PdfViewerDocument extends LitElement {
 
@@ -572,7 +587,7 @@ export class PdfViewerDocument extends LitElement {
     private _loaded: boolean;
 
     @property()
-    highlight: string;
+    highlight: string | RegExp | (string | RegExp)[];
 
     @query('#container')
     private container: HTMLDivElement;

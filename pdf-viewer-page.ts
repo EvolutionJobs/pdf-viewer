@@ -124,7 +124,6 @@ export interface ParentPdfDocument {
     source: string;
 }
 
-
 /** Clear the content of a canvas element
  * @param canvas The canvas to clear */
 function clearCanvas(canvas: HTMLCanvasElement) {
@@ -132,6 +131,8 @@ function clearCanvas(canvas: HTMLCanvasElement) {
     context.clearRect(0, 0, canvas.width, canvas.height)
 }
 
+/** Clear the content of a DOM element
+ * @param parent The element to clear */
 function clearDom(parent: HTMLElement) {
     const kids = parent.childNodes;
     while (kids && kids.length > 0)
@@ -144,6 +145,10 @@ const obs = new IntersectionObserver(eles => {
         (e.target as any).shown = e.isIntersecting;
 });
 
+/** Replace text nodes that match a term with highlights.
+ * @param element The element to inject highlights into.
+ * @param highlight The regular expression to search for.
+ * @param ordinal The ordinal for the highlight. */
 function injectHighlight(element: ChildNode, highlight: RegExp, ordinal: number) {
     if (!element.childNodes)
         return;
@@ -167,6 +172,8 @@ function injectHighlight(element: ChildNode, highlight: RegExp, ordinal: number)
     }
 }
 
+/** Render a single page of a PDF.
+ *  Only intended for use in <pdf-viewer-document>, this relies on document proxy references being passed and cannot generate its own. */
 @customElement('pdf-viewer-page')
 export class PdfViewerPage extends LitElement {
 
