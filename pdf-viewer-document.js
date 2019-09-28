@@ -455,7 +455,6 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         super(...arguments);
         this.fit = 'height';
         this.zoomRatio = 1.25;
-        this._views = 1;
         this._pos = ({ x: 0, y: 0 });
         this._zoom = 1;
     }
@@ -468,8 +467,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         } : undefined;
         const hl = [...normaliseSearchTerms(this.highlight)];
         return html `
-<div id="container" 
-    @track=${this._handleTrack}>
+<div id="container">
     <div id="viewer" class="viewer">
         ${pages && this._PDF ? pages.map(p => html `
         <pdf-viewer-page
@@ -483,7 +481,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
     }
     firstUpdated(changedProperties) {
         if (this._src)
-            this._srcChanged(this._src);
+            this.srcChanged(this._src);
     }
     get src() { return this._src; }
     ;
@@ -491,7 +489,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         if (this._src === s)
             return;
         this._src = s;
-        this._srcChanged(this._src);
+        this.srcChanged(this._src);
     }
     get page() { return this._page; }
     ;
@@ -503,59 +501,24 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
             return;
         this._page = validated;
     }
-    connectedCallback() {
-        super.connectedCallback();
-        this.addEventListener('iron-resize', this._recenter);
-    }
-    _clearView(view) {
-        const context = view.getContext('2d');
-        context.clearRect(0, 0, view.width, view.height);
-    }
-    async _srcChanged(src) {
+    async srcChanged(src) {
         if (!this.container)
             return;
-        this._loaded = false;
         this._page = undefined;
         this.pages = undefined;
         this._PDF = undefined;
         if (!src || !navigator.onLine)
             return;
-        this._firstRender = false;
-        try {
-            const pdfjsLib = await pdfApi();
-            const pdf = await pdfjsLib.getDocument(src);
-            this._PDF = pdf;
-        }
-        catch (ex) {
-            console.error(ex);
-            throw ex;
-        }
+        const pdfjsLib = await pdfApi();
+        const pdf = await pdfjsLib.getDocument(src);
+        this._PDF = pdf;
         if (src !== this.src)
             return;
-        this._loaded = true;
         this.pages = this._PDF.numPages;
         this.page = 1;
         this.dispatchEvent(new CustomEvent('pdf-viewer-loaded', {
             detail: { src: src },
         }));
-    }
-    next() {
-        if (this.page >= this.pages) {
-            this.dispatchEvent(new CustomEvent('pdf-viewer-outrange'));
-            return;
-        }
-        this.page += this._views;
-        if (this.page > this.pages)
-            this.page = this.pages;
-    }
-    previous() {
-        if (this.page <= 1) {
-            this.dispatchEvent(new CustomEvent('pdf-viewer-outrange'));
-            return;
-        }
-        this.page -= this._views;
-        if (this.page === 0)
-            this.page = 1;
     }
     async updateFit(fitMode) {
         if (fitMode === 'width')
@@ -564,20 +527,20 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
             this.fitHeight();
     }
     async fitWidth() {
-        const page = await this._PDF.getPage(this.page);
+        const page = await this._PDF.getPage(1);
         let viewport = page.getViewport({ scale: 1 });
         let rect = this.container.getBoundingClientRect();
-        const zoom = (rect.width - 20) / (this._views * viewport.width);
+        const zoom = (rect.width - 20) / viewport.width;
         if (zoom === this._zoom)
             return;
         this._zoom = zoom;
     }
     async fitHeight() {
         const pageNum = this.page || 1;
-        const page = await this._PDF.getPage(this.page);
+        const page = await this._PDF.getPage(1);
         let viewport = page.getViewport({ scale: 1 });
         let rect = this.container.getBoundingClientRect();
-        const zoom = Math.min((rect.width - 20) / (this._views * viewport.width), (rect.height - 20) / viewport.height);
+        const zoom = Math.min((rect.width - 20) / viewport.width, (rect.height - 20) / viewport.height);
         if (zoom === this._zoom)
             return;
         this._zoom = zoom;
@@ -588,65 +551,6 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
     }
     zoomout() {
         this._zoom = this._zoom / this.zoomRatio;
-    }
-    async _renderView(view, pg) {
-        if (!this._loaded)
-            return;
-        try {
-            const page = await this._PDF.getPage(pg);
-            const viewport = page.getViewport({ scale: this._zoom });
-            view.width = viewport.width;
-            view.height = viewport.height;
-            const context = view.getContext('2d');
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport,
-            };
-            await page.render(renderContext);
-            const textContent = await page.getTextContent();
-            const textLayerDiv = view.nextElementSibling;
-            const pdfjsLib = await pdfApi();
-            pdfjsLib.renderTextLayer({
-                enhanceTextSelection: true,
-                textContent,
-                container: textLayerDiv,
-                viewport,
-                textDivs: [],
-            });
-        }
-        catch (ex) {
-            const context = view.getContext('2d');
-            context.clearRect(0, 0, view.width, view.height);
-            throw ex;
-        }
-    }
-    _handleTrack(evt) {
-        let tmp;
-        const getDiff = (evt) => {
-            return {
-                x: this._trackPos.x - evt.detail.x,
-                y: this._trackPos.y - evt.detail.y,
-            };
-        };
-        switch (evt.detail.state) {
-            case 'start':
-                this._trackPos = {
-                    x: evt.detail.x,
-                    y: evt.detail.y,
-                };
-                break;
-            case 'track':
-                tmp = getDiff(evt);
-                break;
-            case 'end':
-                tmp = getDiff(evt);
-                this._pos.x = this._pos.x - tmp.x;
-                this._pos.y = this._pos.y - tmp.y;
-                this._recenter();
-                break;
-        }
-    }
-    _recenter() {
     }
 };
 __decorate([

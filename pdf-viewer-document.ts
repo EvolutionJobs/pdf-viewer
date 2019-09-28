@@ -2,7 +2,7 @@
 import { PDFDocumentProxy, PDFRenderTask } from './pdf'; // Definitions only
 import '../../lib/@polymer/paper-spinner/paper-spinner.js';
 import { pdfApi } from './pdf-utility.js';
-import  './pdf-viewer-page.js';
+import './pdf-viewer-page.js';
 import { ParentPdfDocument } from './pdf-viewer-page';
 
 const styles = css`
@@ -483,8 +483,7 @@ export class PdfViewerDocument extends LitElement {
         const hl = [...normaliseSearchTerms(this.highlight)];
 
         return html`
-<div id="container" 
-    @track=${this._handleTrack}>
+<div id="container">
     <div id="viewer" class="viewer">
         ${pages && this._PDF ? pages.map(p => html`
         <pdf-viewer-page
@@ -499,7 +498,7 @@ export class PdfViewerDocument extends LitElement {
 
     firstUpdated(changedProperties: any) {
         if (this._src)
-            this._srcChanged(this._src);
+            this.srcChanged(this._src);
     }
 
     private _src: string;
@@ -514,7 +513,7 @@ export class PdfViewerDocument extends LitElement {
             return;
 
         this._src = s;
-        this._srcChanged(this._src);
+        this.srcChanged(this._src);
     }
 
     /** The page number to display.
@@ -549,33 +548,9 @@ export class PdfViewerDocument extends LitElement {
     @property({ attribute: 'zoom-ratio', type: Number })
     zoomRatio: number = 1.25;
 
-    /** The view mode of the document.
-     * - 'single': single page
-     * - 'double': double page side by side */
-    //@property()
-    //get mode(): 'single' | 'double' { return this._mode; };
-    //set mode(m: 'single' | 'double') {
-    //    if (this._mode === m)
-    //        return;
-
-    //    this._mode = m;
-    //    this._modeChanged(m);
-    //}
-
-    /** Number of pages visible at once and incremented with each step */
-    private _views: 1 | 2 = 1;
-
     /** Internal PDF object. */
     private _PDF: PDFDocumentProxy;
 
-    /** Indicates if the first rending has been done. */
-    private _firstRender: boolean;
-
-    /** While a page is rendering this will hold the page number. */
-    private _pageRendering: number;
-
-    /** If a page queues rendering this will hold the next page. */
-    private _pageNumPending: number;
 
     private _trackPos: { x: number, y: number };
 
@@ -584,135 +559,52 @@ export class PdfViewerDocument extends LitElement {
     @property({ type: Number })
     private _zoom: number = 1;
 
-    private _loaded: boolean;
-
     @property()
     highlight: string | RegExp | (string | RegExp)[];
 
     @query('#container')
     private container: HTMLDivElement;
 
-    connectedCallback() {
-        super.connectedCallback()
-        this.addEventListener('iron-resize', this._recenter)
-    }
-
-    private _clearView(view: HTMLCanvasElement) {
-        const context = view.getContext('2d')
-        context.clearRect(0, 0, view.width, view.height)
-    }
+    //connectedCallback() {
+    //    super.connectedCallback()
+    //    this.addEventListener('iron-resize', this._recenter)
+    //}
 
     /** When the source property is set render
      * @event pdf-viewer-loaded Fired when the download of the pdf succeed.
      * @param src the source string of the pdf. */
-    private async _srcChanged(src: string) {
+    private async srcChanged(src: string) {
 
         if (!this.container)
             return; // not loaded yet, defer until it has
-
-        this._loaded = false;
 
         // Clear the pages and document proxy
         this._page = undefined;
         this.pages = undefined;
         this._PDF = undefined;
 
-        //// Reset the canvas elements
-        //this.page2canvas.hidden = true;
-        //this.page1canvas.hidden = true;
-        //this._clearView(this.page1canvas);
-        //this._clearView(this.page2canvas);
-
         if (!src || !navigator.onLine)
             return;
 
-        //this.spinner.active = true;
+        // Loaded via <script> tag, create shortcut to access PDF.js exports.
+        const pdfjsLib = await pdfApi();
 
-        this._firstRender = false;
-
-        try {
-            // Loaded via <script> tag, create shortcut to access PDF.js exports.
-            const pdfjsLib = await pdfApi();
-
-            const pdf = await pdfjsLib.getDocument(src);
-            this._PDF = pdf;
-        }
-        catch (ex) {
-            console.error(ex);
-            throw ex;
-        }
+        const pdf = await pdfjsLib.getDocument(src);
+        this._PDF = pdf;
 
         if (src !== this.src)
             return; // fake cancel
 
-        this._loaded = true;
-
         this.pages = this._PDF.numPages;
         this.page = 1;
-
-        //if (this.page > pdf.numPages)
-        //    this.page = pdf.numPages;
-
-        //if (this.page < 0)
-        //    this.page = 1;
-
-        //if (!this.page)
-        //    this.page = 1;
 
         this.dispatchEvent(new CustomEvent<{ src: string }>(
             'pdf-viewer-loaded', {
                 detail: { src: src },
             }))
-
-        //this.updateFit(this.fit);
-
-        //this.PDFJS.getDocument(src)
     }
 
-    //_modeChanged(mode: 'single' | 'double') {
-    //    if (mode === 'double') {
-    //        this._views = 2;
-    //        this.page2canvas.hidden = false;
-    //    }
-    //    else {
-    //        this._views = 1;
-    //        this.page2canvas.hidden = true;
-    //    }
-
-    //    // Modes changed, so recalc fit and centre
-    //    this._recenter();
-    //    this.updateFit(this.fit);
-    //}
-
-    /** Move to the next page.
-     * @event pdf-viewer-outrange Fired when trying to render a non existing page. */
-    next() {
-        if (this.page >= this.pages) {
-            this.dispatchEvent(new CustomEvent('pdf-viewer-outrange'));
-            return;
-        }
-
-        this.page += this._views;
-
-        if (this.page > this.pages)
-            this.page = this.pages;
-    }
-
-    /** Move to the previous page.
-     * @event pdf-viewer-outrange Fired when trying to render a non existing page. */
-    previous() {
-        if (this.page <= 1) {
-            this.dispatchEvent(new CustomEvent('pdf-viewer-outrange'));
-            return;
-        }
-
-        this.page -= this._views;
-
-        if (this.page === 0)
-            this.page = 1;
-    }
-
-    private async updateFit(fitMode: 'height' | 'width') {
+    async updateFit(fitMode: 'height' | 'width') {
         if (fitMode === 'width')
             this.fitWidth();
         else this.fitHeight();
@@ -720,215 +612,41 @@ export class PdfViewerDocument extends LitElement {
 
     /** Display the document full width */
     private async fitWidth() {
-        const page = await this._PDF.getPage(this.page);
+        const page = await this._PDF.getPage(1);
 
         let viewport = page.getViewport({ scale: 1 });
         let rect = this.container.getBoundingClientRect();
 
-        const zoom = (rect.width - 20) / (this._views * viewport.width);
+        const zoom = (rect.width - 20) / viewport.width;
         if (zoom === this._zoom)
             return;
 
         this._zoom = zoom;
-        //this._drawPage();
     }
 
     /** Display the whole page */
     private async fitHeight() {
         const pageNum = this.page || 1;
-        const page = await this._PDF.getPage(this.page);
+        const page = await this._PDF.getPage(1);
 
         let viewport = page.getViewport({ scale: 1 });
         let rect = this.container.getBoundingClientRect();
 
-        const zoom = Math.min((rect.width - 20) / (this._views * viewport.width), (rect.height - 20) / viewport.height);
+        const zoom = Math.min((rect.width - 20) / viewport.width, (rect.height - 20) / viewport.height);
         if (zoom === this._zoom)
             return;
 
         this._zoom = zoom;
         this.page = pageNum;
-        //this._drawPage();
     }
 
     /** Zoom in */
     zoomin() {
         this._zoom = this._zoom * this.zoomRatio;
-        //this._drawPage();
     }
 
     /** Zoom out */
     zoomout() {
         this._zoom = this._zoom / this.zoomRatio;
-        //this._drawPage();
-    }
-
-    private async _renderView(view: HTMLCanvasElement, pg: number) {
-        if (!this._loaded)
-            return;
-
-        try {
-            const page = await this._PDF.getPage(pg);
-
-            //
-
-            //console.log('Lines on page', text);
-
-
-            const viewport = page.getViewport({ scale: this._zoom });
-            view.width = viewport.width;
-            view.height = viewport.height;
-            const context = view.getContext('2d');
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport,
-            };
-
-            await page.render(renderContext);
-
-            const textContent = await page.getTextContent();
-
-            const textLayerDiv = view.nextElementSibling;
-            //document.createElement("div");
-            //textLayerDiv.setAttribute("class", "textLayer");
-
-            const pdfjsLib = await pdfApi();
-
-            pdfjsLib.renderTextLayer({
-                enhanceTextSelection: true,
-                textContent,
-                container: textLayerDiv,
-                viewport,
-                textDivs: [],
-            });
-
-
-            //view.parentElement.appendChild(textLayerDiv);
-
-            //for (const item of text.items) {
-            //    item.str.match(/html/gi);
-            //}
-        }
-        catch (ex) {
-            const context = view.getContext('2d');
-            context.clearRect(0, 0, view.width, view.height);
-            throw ex;
-        }
-    }
-
-    /**
-     * @event pdf-viewer-render Fired when a page have been rendered.
-     * @param pg the endered page number. */
-    //private async _drawPage(pg?: number) {
-    //    if (!this._loaded)
-    //        return;
-
-    //    if (!pg || isNaN(pg))
-    //        pg = this.page;
-
-    //    if (this._pageRendering > 0) {
-    //        // Another page is rendering, request this page to be next (may be overwritten and skipped)
-    //        this._pageNumPending = pg
-    //        return;
-    //    }
-
-    //    try {
-    //        // Block other renders and set this as the active render
-    //        this._pageRendering = pg;
-    //        this.spinner.active = true;
-
-    //        const promises: Promise<any>[] = [];
-    //        if (this.mode === 'single') {
-    //            this.page1canvas.hidden = false;
-    //            promises.push(this._renderView(this.page1canvas, pg))
-    //        } else {
-    //            this.page2canvas.hidden = false
-    //            this.page1canvas.hidden = false
-    //            promises.push(this._renderView(this.page1canvas, pg - pg % 2))
-    //            promises.push(this._renderView(this.page2canvas, pg - pg % 2 + 1))
-    //        }
-
-    //        await Promise.all(promises);
-
-    //        this._firstRender = true;
-    //    }
-    //    finally {
-    //        // Always release the block on rendering
-    //        this._pageRendering = undefined;
-    //        this.spinner.active = false;
-    //    }
-
-    //    this._recenter();
-
-    //    this.dispatchEvent(new CustomEvent<{ page: number }>('pdf-viewer-render', { detail: { page: this.page } }));
-
-    //    if (this._pageNumPending > 0) {
-    //        // One or more draw requests came in while this was rendering, so call again
-    //        const p = this._pageNumPending;
-    //        this._pageNumPending = undefined;
-    //        await this._drawPage(p);
-    //    }
-    //}
-
-    private _handleTrack(evt: CustomEvent<{ x: number, y: number, state: 'start' | 'track' | 'end' }>) {
-        let tmp
-        const getDiff = (evt: CustomEvent<{ x: number, y: number }>) => {
-            return {
-                x: this._trackPos.x - evt.detail.x,
-                y: this._trackPos.y - evt.detail.y,
-            }
-        }
-
-        switch (evt.detail.state) {
-            case 'start':
-                this._trackPos = {
-                    x: evt.detail.x,
-                    y: evt.detail.y,
-                };
-                break;
-
-            case 'track':
-                tmp = getDiff(evt);
-                //  this.viewer.style.transform = `translateX(${this._pos.x - tmp.x}px) translateY(${this._pos.y - tmp.y}px)`;
-                break;
-
-            case 'end':
-                tmp = getDiff(evt);
-                this._pos.x = this._pos.x - tmp.x;
-                this._pos.y = this._pos.y - tmp.y;
-                this._recenter();
-                break;
-        }
-    }
-
-    private _recenter() {
-        //if (!this.container || !this.viewer)
-        //    return;
-
-        //const rect = this.container.getBoundingClientRect();
-        //const viewerRect = this.viewer.getBoundingClientRect();
-
-        //if (rect.width > viewerRect.width)
-        //    this._pos.x = (rect.width - viewerRect.width) / 2;
-
-        //if (rect.height > viewerRect.height)
-        //    this._pos.y = (rect.height - viewerRect.height) / 2;
-
-        //if (rect.width < viewerRect.width &&
-        //    rect.width > viewerRect.width + this._pos.x + 50)
-        //    this._pos.x = rect.width - 50 - viewerRect.width;
-
-        //if (rect.width < viewerRect.width &&
-        //    this._pos.x > 50)
-        //    this._pos.x = 50;
-
-        //if (rect.height < viewerRect.height &&
-        //    rect.height > viewerRect.height + this._pos.y + 50)
-        //    this._pos.y = rect.height - 50 - viewerRect.height;
-
-        //if (rect.height < viewerRect.height &&
-        //    this._pos.y > 50)
-        //    this._pos.y = 50;
-
-        //this.viewer.style.transform = `translateX(${this._pos.x}px) translateY(${this._pos.y}px)`;
     }
 }
