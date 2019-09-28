@@ -614,10 +614,12 @@ export class PdfViewerDocument extends LitElement {
     private async fitWidth() {
         const page = await this._PDF.getPage(1);
 
-        let viewport = page.getViewport({ scale: 1 });
-        let rect = this.container.getBoundingClientRect();
+        const viewport = page.getViewport({ scale: 1 });
+        const rect = this.container.getBoundingClientRect();
+        // Avoid errors if element is allowed to stretch past screen boundary
+        const width = Math.min(screen.width, window.innerWidth, rect.width); 
 
-        const zoom = (rect.width - 20) / viewport.width;
+        const zoom = (width - 24) / viewport.width;
         if (zoom === this._zoom)
             return;
 
@@ -629,10 +631,12 @@ export class PdfViewerDocument extends LitElement {
         const pageNum = this.page || 1;
         const page = await this._PDF.getPage(1);
 
-        let viewport = page.getViewport({ scale: 1 });
-        let rect = this.container.getBoundingClientRect();
+        const viewport = page.getViewport({ scale: 1 });
+        const rect = this.container.getBoundingClientRect();
+        // Avoid errors if element is allowed to stretch past screen boundary
+        const height = Math.min(screen.height, window.innerHeight, rect.height);
 
-        const zoom = Math.min((rect.width - 20) / viewport.width, (rect.height - 20) / viewport.height);
+        const zoom =(height - 24) / viewport.height;
         if (zoom === this._zoom)
             return;
 

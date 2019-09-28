@@ -8,18 +8,21 @@ import { LitElement, html, css, property, customElement, query } from '../../lib
 import './pdf-viewer-document.js';
 import '../../lib/@polymer/paper-icon-button/paper-icon-button.js';
 import '../../lib/@polymer/iron-icons/iron-icons.js';
+import '../../lib/@polymer/paper-tooltip/paper-tooltip.js';
 const styles = css `
 :host {
-    display: block;
+    display: flex;
     height: 100vh;
-    overflow: auto;
+    overflow: hidden;
     position: relative;
 }
 
 #actions {
     position: absolute;
     bottom: 0;
-    right: 0;
+    right: 24px;
+    width: min-content;
+    height: min-content;
 }
 
 paper-icon-button {
@@ -53,14 +56,29 @@ let PdfViewer = class PdfViewer extends LitElement {
     .highlight=${this.highlight}></pdf-viewer-document>
 
 <div id="actions">
-    <paper-icon-button icon=${fitIcon}
-        @tap=${this.toggleFit}></paper-icon-button>
-    <paper-icon-button icon="launch"
+    <paper-icon-button icon="launch" id="actionExpand"
         @tap=${this.expandFull}></paper-icon-button>
-    <paper-icon-button icon="zoom-in"
+    <paper-tooltip for="actionExpand" position="left" animation-delay="0">
+        Open document in a new tab
+    </paper-tooltip>
+
+    <paper-icon-button icon=${fitIcon} id="actionFit"
+        @tap=${this.toggleFit}></paper-icon-button>
+    <paper-tooltip for="actionFit" position="left" animation-delay="0">
+        Fit to one page ${this.fitMode === 'height' ? 'width' : 'height'}
+    </paper-tooltip>
+
+    <paper-icon-button icon="zoom-in" id="actionZoomIn"
         @tap=${this.zoomin}></paper-icon-button>
-    <paper-icon-button icon="zoom-out"
+    <paper-tooltip for="actionZoomIn" position="left" animation-delay="0">
+        Zoom In
+    </paper-tooltip>
+
+    <paper-icon-button icon="zoom-out" id="actionZoomOut"
         @tap=${this.zoomout}></paper-icon-button>
+    <paper-tooltip for="actionZoomOut" position="left" animation-delay="0">
+        Zoom Out
+    </paper-tooltip>
 </div>`;
     }
     expandFull() {
