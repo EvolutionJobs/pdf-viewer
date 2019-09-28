@@ -145,6 +145,46 @@ const obs = new IntersectionObserver(eles => {
         (e.target as any).shown = e.isIntersecting;
 });
 
+/** If no match, return undefined
+ *  If one or more matches, return array of text and highlight nodes to replace the text with.
+ * @param text The text to search.
+ * @param highlight The regular expression to search for.
+ * @param ordinal The ordinal to mark the term with.
+ * @returns Array of nodes to replace text with, or nothing if none found. */
+function findHighlight(text: string, highlight: RegExp, ordinal: number) {
+    if (!text) return;  // Empty
+
+    let match = highlight.exec(text);
+    if (!match) return; // No match
+
+    const termIndex = ordinal % termMaxOrdinal;
+
+    let working = text;
+    const replacement: Node[] = [];
+    while (match) {
+        const found = match[0];
+        // Text before the match
+        const before = document.createTextNode(working.substring(0, match.index));
+
+        // The highlighted match
+        const hl = document.createElement('span');
+        hl.textContent = found;
+        hl.className = `term term-${termIndex}`;
+        replacement.push(before, hl);
+
+        // Text after the match
+        working = working.substring(match.index + found.length);
+
+        // Look for another match against the remainder
+        match = highlight.exec(working);
+    }
+
+    // Remaining text with no matches found
+    const after = document.createTextNode(working);
+    replacement.push(after);
+    return replacement;
+}
+
 /** Replace text nodes that match a term with highlights.
  * @param element The element to inject highlights into.
  * @param highlight The regular expression to search for.
@@ -155,18 +195,9 @@ function injectHighlight(element: ChildNode, highlight: RegExp, ordinal: number)
 
     for (const child of [...element.childNodes]) {
         if (child.nodeType === Node.TEXT_NODE) {
-            const text = child.textContent;
-            const match = highlight.exec(text);
-            if (match) {
-                const found = match[0];
-                const before = document.createTextNode(text.substring(0, match.index));
-                const hl = document.createElement('span');
-                hl.textContent = found;
-                hl.className = `term term-${ordinal % termMaxOrdinal}`;
-                const after = document.createTextNode(text.substring(match.index + found.length));
-
-                child.replaceWith(before, hl, after);
-            }
+            const replace = findHighlight(child.textContent, highlight, ordinal);
+            if (replace)
+                child.replaceWith(...replace);
         }
         else injectHighlight(child, highlight, ordinal);
     }

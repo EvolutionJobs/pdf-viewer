@@ -123,22 +123,37 @@ const obs = new IntersectionObserver(eles => {
     for (const e of eles)
         e.target.shown = e.isIntersecting;
 });
+function findHighlight(text, highlight, ordinal) {
+    if (!text)
+        return;
+    let match = highlight.exec(text);
+    if (!match)
+        return;
+    const termIndex = ordinal % termMaxOrdinal;
+    let working = text;
+    const replacement = [];
+    while (match) {
+        const found = match[0];
+        const before = document.createTextNode(working.substring(0, match.index));
+        const hl = document.createElement('span');
+        hl.textContent = found;
+        hl.className = `term term-${termIndex}`;
+        replacement.push(before, hl);
+        working = working.substring(match.index + found.length);
+        match = highlight.exec(working);
+    }
+    const after = document.createTextNode(working);
+    replacement.push(after);
+    return replacement;
+}
 function injectHighlight(element, highlight, ordinal) {
     if (!element.childNodes)
         return;
     for (const child of [...element.childNodes]) {
         if (child.nodeType === Node.TEXT_NODE) {
-            const text = child.textContent;
-            const match = highlight.exec(text);
-            if (match) {
-                const found = match[0];
-                const before = document.createTextNode(text.substring(0, match.index));
-                const hl = document.createElement('span');
-                hl.textContent = found;
-                hl.className = `term term-${ordinal % termMaxOrdinal}`;
-                const after = document.createTextNode(text.substring(match.index + found.length));
-                child.replaceWith(before, hl, after);
-            }
+            const replace = findHighlight(child.textContent, highlight, ordinal);
+            if (replace)
+                child.replaceWith(...replace);
         }
         else
             injectHighlight(child, highlight, ordinal);
