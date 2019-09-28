@@ -1,0 +1,239 @@
+﻿var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+import { LitElement, html, css, property, customElement, query } from '../../lib/lit-element/lit-element.js';
+import '../../lib/@polymer/paper-spinner/paper-spinner.js';
+import { pdfApi } from './pdf-utility.js';
+const styles = css `
+:host {
+    position: relative;
+    display: inline-block;
+    background: var(--pdf-paper, #fff);
+    overflow: hidden;
+    min-height: 200px;
+    margin: var(--pdf-page-margin, 12px);
+    margin-left: 0;
+    margin-top: 0;
+    width: min-content;
+    box-shadow: 
+        rgba(0, 0, 0, 0.14) 0px 4px 5px 0px, 
+        rgba(0, 0, 0, 0.12) 0px 1px 10px 0px, 
+        rgba(0, 0, 0, 0.4) 0px 2px 4px -1px;
+}
+`;
+const viewerCss = css `
+.textLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.2;
+    line-height: 1.0;
+}
+
+    .textLayer > span {
+        color: transparent;
+        position: absolute;
+        white-space: pre;
+        cursor: text;
+        -webkit-transform-origin: 0% 0%;
+                transform-origin: 0% 0%;
+    }
+
+    .textLayer .highlight {
+        margin: -1px;
+        padding: 1px;
+
+        background-color: rgb(180, 0, 170);
+        border-radius: 4px;
+    }
+
+        .textLayer .highlight.begin {
+            border-radius: 4px 0px 0px 4px;
+        }
+
+        .textLayer .highlight.end {
+            border-radius: 0px 4px 4px 0px;
+        }
+
+        .textLayer .highlight.middle {
+            border-radius: 0px;
+        }
+
+        .textLayer .highlight.selected {
+            background-color: rgb(0, 100, 0);
+        }
+
+    .textLayer ::-moz-selection { background: rgb(0,0,255); }
+
+    .textLayer ::selection { background: rgb(0,0,255); }
+
+    .textLayer .endOfContent {
+        display: block;
+        position: absolute;
+        left: 0px;
+        top: 100%;
+        right: 0px;
+        bottom: 0px;
+        z-index: -1;
+        cursor: default;
+        -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+                user-select: none;
+    }
+
+    .textLayer .endOfContent.active {
+        top: 0px;
+    }`;
+function clearCanvas(canvas) {
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+}
+function clearDom(parent) {
+    const kids = parent.childNodes;
+    while (kids && kids.length > 0)
+        parent.removeChild(kids[kids.length - 1]);
+}
+const obs = new IntersectionObserver(eles => {
+    for (const e of eles)
+        e.target.shown = e.isIntersecting;
+});
+function injectHighlight(element, highlight) {
+    if (element.childNodes)
+        for (const child of [...element.childNodes]) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                const text = child.textContent;
+                const match = highlight.exec(text);
+                if (match) {
+                    const found = match[0];
+                    const before = document.createTextNode(text.substring(0, match.index));
+                    const hl = document.createElement('span');
+                    hl.textContent = found;
+                    hl.className = 'highlight';
+                    const after = document.createTextNode(text.substring(match.index + found.length));
+                    child.replaceWith(before, hl, after);
+                }
+            }
+            else
+                injectHighlight(child, highlight);
+        }
+}
+let PdfViewerPage = class PdfViewerPage extends LitElement {
+    constructor() {
+        super(...arguments);
+        this.pageNumber = 1;
+        this.zoom = 1;
+    }
+    static get styles() {
+        return [styles, viewerCss];
+    }
+    render() {
+        this.debouncePdfRender();
+        return html `
+<canvas width="612" height="792"></canvas>
+<div class="textLayer"></div></div>`;
+    }
+    get shown() { return this._shown; }
+    ;
+    set shown(s) {
+        if (!s && !this._shown)
+            return;
+        if (s && this._shown)
+            return;
+        this._shown = s;
+        if (s)
+            this.debouncePdfRender();
+    }
+    ;
+    connectedCallback() {
+        obs.observe(this);
+        super.connectedCallback();
+    }
+    disconnectedCallback() {
+        obs.unobserve(this);
+        super.disconnectedCallback();
+    }
+    async debouncePdfRender() {
+        if (!this.shown)
+            return;
+        setTimeout(() => this.startRender(), 50);
+    }
+    async startRender() {
+        if (!this.shown)
+            return;
+        if (this.loading)
+            await this.loading;
+        while (!this.canvas)
+            await new Promise(requestAnimationFrame);
+        this.loading = this.renderPage(this.canvas, this.textLayer, this.pageNumber, this.highlight);
+    }
+    async renderPage(view, textLayer, pageNumber, highlight) {
+        clearCanvas(view);
+        clearDom(textLayer);
+        if (!this.pdf)
+            return;
+        if (!this.api)
+            this.api = await pdfApi();
+        console.time(`Rendering page ${pageNumber}`);
+        try {
+            const page = await this.pdf.document.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: this.zoom });
+            view.width = viewport.width;
+            view.height = viewport.height;
+            const context = view.getContext('2d');
+            const renderContext = {
+                canvasContext: context, viewport,
+            };
+            await page.render(renderContext);
+            const textContent = await page.getTextContent();
+            await this.api.renderTextLayer({
+                enhanceTextSelection: true,
+                textContent,
+                container: textLayer,
+                viewport,
+                textDivs: [],
+            });
+            await new Promise(requestAnimationFrame);
+            const hl = new RegExp(highlight, 'gi');
+            injectHighlight(textLayer, hl);
+        }
+        catch (ex) {
+            const context = view.getContext('2d');
+            context.clearRect(0, 0, view.width, view.height);
+            throw ex;
+        }
+        finally {
+            this.loading = undefined;
+        }
+        console.timeEnd(`Rendering page ${pageNumber}`);
+    }
+};
+__decorate([
+    property({ type: Number, attribute: 'page' })
+], PdfViewerPage.prototype, "pageNumber", void 0);
+__decorate([
+    property({ type: Number })
+], PdfViewerPage.prototype, "zoom", void 0);
+__decorate([
+    property()
+], PdfViewerPage.prototype, "highlight", void 0);
+__decorate([
+    property()
+], PdfViewerPage.prototype, "pdf", void 0);
+__decorate([
+    query('div')
+], PdfViewerPage.prototype, "textLayer", void 0);
+__decorate([
+    query('canvas')
+], PdfViewerPage.prototype, "canvas", void 0);
+PdfViewerPage = __decorate([
+    customElement('pdf-viewer-page')
+], PdfViewerPage);
+export { PdfViewerPage };
+//# sourceMappingURL=pdf-viewer-page.js.map
