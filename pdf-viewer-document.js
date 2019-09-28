@@ -438,6 +438,7 @@ const viewerCss = css `
   margin-bottom: 100%;
   border: 0;
 }`;
+const minZoom = .5;
 function* normaliseSearchTerms(input) {
     if (typeof input === 'string')
         yield new RegExp(input, 'gi');
@@ -542,7 +543,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         this._zoom = this._zoom * this.zoomRatio;
     }
     zoomout() {
-        this._zoom = this._zoom / this.zoomRatio;
+        this._zoom = Math.max(minZoom, this._zoom / this.zoomRatio);
     }
 };
 __decorate([

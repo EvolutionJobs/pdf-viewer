@@ -438,6 +438,9 @@ const viewerCss = css`
   border: 0;
 }`;
 
+/** Don't allow zooming out past this minimum. */
+const minZoom = .5;
+
 function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
     if (typeof input === 'string')
         yield new RegExp(input, 'gi');
@@ -629,6 +632,6 @@ export class PdfViewerDocument extends LitElement {
 
     /** Zoom out */
     zoomout() {
-        this._zoom = this._zoom / this.zoomRatio;
+        this._zoom = Math.max(minZoom, this._zoom / this.zoomRatio);
     }
 }
