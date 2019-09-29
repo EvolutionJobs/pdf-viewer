@@ -1,10 +1,10 @@
 ﻿import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
 import './pdf-viewer-document.js';
-import { PdfViewerDocument } from './pdf-viewer-document';
+import { PdfViewerDocument, PdfLoadErrorEventArgs, PdfLoadedEventArgs, PdfLoadingEventArgs } from './pdf-viewer-document';
 import '../../lib/@polymer/paper-icon-button/paper-icon-button.js';
 import '../../lib/@polymer/iron-icons/iron-icons.js';
 import '../../lib/@polymer/paper-tooltip/paper-tooltip.js';
-import { ifDefined } from '../../lib/lit-html/directives/if-defined.js';
+import '../../lib/@polymer/paper-spinner/paper-spinner.js';
 
 const styles = css`
 :host {
@@ -19,17 +19,12 @@ pdf-viewer-document {
 }
 
 #actions {
-    display: none;
     position: absolute;
     bottom: 0;
     right: 24px;
     width: min-content;
     height: min-content;
 }
-
-    #actions.loaded {
-        display: block;
-    }
 
 paper-icon-button {
     --iron-icon-height: 20px;
@@ -51,50 +46,99 @@ paper-icon-button {
             0 1px 10px 0 rgba(0, 0, 0, 0.12),
             0 2px 4px -1px rgba(0, 0, 0, 0.4);   
     }
-`;
+
+paper-spinner {
+    width: 100px;
+    height: 100px;
+}
+
+.center-overlay {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}`;
 
 /** Render a PDF with basic UI.
- *  This makes assumptions about how the UI should look, use <pdf-viewer-document> directly for custom look and feel. */
+ *  This makes assumptions about how the UI should look, use <pdf-viewer-document> directly for custom look and feel.
+ *  UI elements can be overridden in 3 slots:
+ *      actions: action buttons for zoom, fit and expand. Default is floating action buttons like Chrome's PDF viewer.
+ *      error: message displayed when a document can't be loaded. Default displays the error message.
+ *      loader: content displayed while a document is being retrieved. Default is a 100px paper-spinner. */
 @customElement('pdf-viewer')
 export class PdfViewer extends LitElement {
 
     static get styles() { return [styles]; }
 
+    private renderActions(fitMode: 'height' | 'width' | 'custom') {
+        const fitIcon = fitMode === 'width' ? 'fullscreen-exit' : 'fullscreen';
+
+        return html`
+<slot name="actions">
+    <div id="actions">
+        <paper-icon-button icon="launch" id="actionExpand"
+            @tap=${this.expandFull}></paper-icon-button>
+        <paper-tooltip for="actionExpand" position="left" animation-delay="0">
+            Open document in a new tab
+        </paper-tooltip>
+
+        <paper-icon-button icon=${fitIcon} id="actionFit"
+            @tap=${this.toggleFit}></paper-icon-button>
+        <paper-tooltip for="actionFit" position="left" animation-delay="0">
+            Fit to one page ${fitMode === 'height' ? 'width' : 'height'}
+        </paper-tooltip>
+
+        <paper-icon-button icon="zoom-in" id="actionZoomIn"
+            @tap=${this.zoomin}></paper-icon-button>
+        <paper-tooltip for="actionZoomIn" position="left" animation-delay="0">
+            Zoom In
+        </paper-tooltip>
+
+        <paper-icon-button icon="zoom-out" id="actionZoomOut"
+            @tap=${this.zoomout}></paper-icon-button>
+        <paper-tooltip for="actionZoomOut" position="left" animation-delay="0">
+            Zoom Out
+        </paper-tooltip>
+    </div>
+</slot>`
+    }
+
+    private renderError(error: PdfLoadErrorEventArgs) {
+        return html`
+<div class="center-overlay">
+    <slot name="error">
+        <div id="error">
+            <h2>${this.loadError.name || 'Exception'}</h2>
+            ${this.loadError.message}
+        </div>
+    </slot>
+</div>`;
+    }
+
+    private renderSpinner() {
+        return html`
+<div class="center-overlay">
+    <slot name="loader">
+        <paper-spinner active></paper-spinner>
+    </slot>
+</div>`
+    }
+
     render() {
-        const fitIcon = this.fitMode === 'width' ? 'fullscreen-exit' : 'fullscreen';
 
         return html`
 <pdf-viewer-document
     .src=${this.src} 
     .highlight=${this.highlight}
-    @pdf-document-loading=${e => this.loaded = false}
-    @pdf-document-loaded=${ e => this.loaded = true}></pdf-viewer-document>
+    @pdf-document-loading=${this.pdfLoading}
+    @pdf-document-loaded=${this.pdfLoaded}
+    @pdf-document-error=${this.pdfLoadError}></pdf-viewer-document>
 
-<div id="actions" class=${ifDefined(this.loaded ? 'loaded' : undefined)}>
-    <paper-icon-button icon="launch" id="actionExpand"
-        @tap=${this.expandFull}></paper-icon-button>
-    <paper-tooltip for="actionExpand" position="left" animation-delay="0">
-        Open document in a new tab
-    </paper-tooltip>
-
-    <paper-icon-button icon=${fitIcon} id="actionFit"
-        @tap=${this.toggleFit}></paper-icon-button>
-    <paper-tooltip for="actionFit" position="left" animation-delay="0">
-        Fit to one page ${this.fitMode === 'height' ? 'width' : 'height'}
-    </paper-tooltip>
-
-    <paper-icon-button icon="zoom-in" id="actionZoomIn"
-        @tap=${this.zoomin}></paper-icon-button>
-    <paper-tooltip for="actionZoomIn" position="left" animation-delay="0">
-        Zoom In
-    </paper-tooltip>
-
-    <paper-icon-button icon="zoom-out" id="actionZoomOut"
-        @tap=${this.zoomout}></paper-icon-button>
-    <paper-tooltip for="actionZoomOut" position="left" animation-delay="0">
-        Zoom Out
-    </paper-tooltip>
-</div>`;
+${this.loaded ?
+    this.renderActions(this.fitMode) :
+    this.loadError ?
+        this.renderError(this.loadError) :
+        this.renderSpinner()}`;
     }
 
     /** URL of the PDF file to display. */
@@ -111,28 +155,56 @@ export class PdfViewer extends LitElement {
     @property()
     private loaded: boolean;
 
+    @property()
+    private loadError: PdfLoadErrorEventArgs;
+
     /** Document control used to render the PDF */
     @query('pdf-viewer-document')
     private pdfDocument: PdfViewerDocument;
 
-    private expandFull() {
+    /** Open the document in a new tab/window using the browser's native render. */
+    @eventOptions({ capture: false, passive: true })
+    expandFull() {
         const target = `${this.src}#toolbar=1`;
         window.open(target, '_blank');
     }
 
-    private toggleFit() {
+    /** Toggle fit mode: width of one page or height of one page.
+     *  Calling this will reset zoom to fit by height of one page. */
+    @eventOptions({ capture: false, passive: true })
+    toggleFit() {
         const fit = this.fitMode === 'height' ? 'width' : 'height';
         this.fitMode = fit;
         this.pdfDocument.updateFit(fit);
     }
 
-    private zoomin() {
+    /** Zoom in 1 step */
+    @eventOptions({ capture: false, passive: true })
+    zoomin() {
         this.fitMode = 'custom';
         this.pdfDocument.zoomin()
     }
 
-    private zoomout() {
+    /** Zoom out 1 step */
+    @eventOptions({ capture: false, passive: true })
+    zoomout() {
         this.fitMode = 'custom';
         this.pdfDocument.zoomout()
+    }
+
+    @eventOptions({ capture: false, passive: true })
+    private pdfLoading(e: CustomEvent<PdfLoadingEventArgs>) {
+        this.loadError = undefined;
+        this.loaded = false;
+    }
+
+    @eventOptions({ capture: false, passive: true })
+    private pdfLoaded(e: CustomEvent<PdfLoadedEventArgs>) {
+        this.loaded = true;
+    }
+
+    @eventOptions({ capture: false, passive: true })
+    private pdfLoadError(e: CustomEvent<PdfLoadErrorEventArgs>) {
+        this.loadError = e.detail;
     }
 }

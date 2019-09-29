@@ -5,7 +5,6 @@
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import { LitElement, html, css, property, customElement, query } from '../../lib/lit-element/lit-element.js';
-import '../../lib/@polymer/paper-spinner/paper-spinner.js';
 import { pdfApi } from './pdf-utility.js';
 const styles = css `
 :host {
@@ -22,8 +21,6 @@ const styles = css `
         rgba(0, 0, 0, 0.14) 0px 4px 5px 0px, 
         rgba(0, 0, 0, 0.12) 0px 1px 10px 0px, 
         rgba(0, 0, 0, 0.4) 0px 2px 4px -1px;
-
-
 }
 
 .term {
@@ -39,9 +36,7 @@ const styles = css `
     .term.term-4 { background: var(--pdf-colour-5, #0fd); }
     .term.term-5 { background: var(--pdf-colour-6, #d0f); }
     .term.term-6 { background: var(--pdf-colour-7, #df0); }
-    .term.term-7 { background: var(--pdf-colour-8, #0df); }
-
-`;
+    .term.term-7 { background: var(--pdf-colour-8, #0df); }`;
 const viewerCss = css `
 .textLayer {
     position: absolute;

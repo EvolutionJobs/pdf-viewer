@@ -1,6 +1,5 @@
 ﻿import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
 import { PDFDocumentProxy, PDFRenderTask } from './pdf'; // Definitions only
-import '../../lib/@polymer/paper-spinner/paper-spinner.js';
 import { pdfApi } from './pdf-utility.js';
 import './pdf-viewer-page.js';
 import { ParentPdfDocument } from './pdf-viewer-page';
@@ -21,23 +20,6 @@ const styles = css`
     position: relative;
 }
 
-canvas {
-    display: block;
-    margin: 0;
-}
-
-    canvas:first-of-type {
-        border-right: 1px solid lightgray;
-    }
-
-paper-spinner {
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    top: calc( 50% - 50px);
-    left: calc( 50% - 50px);
-}
-
 .viewer {
     display: flex;
     flex-wrap: wrap;
@@ -45,402 +27,44 @@ paper-spinner {
     box-sizing: border-box;
     padding-left: var(--pdf-page-margin, 12px);
     padding-top: var(--pdf-page-margin, 12px);
-}
-
-[hidden] {
-    display: none;
-}
-
-.yellow-btn {
-    text-transform: none;
-    color: #eeff41;
-}
-`;
-
-/** Import into constructible stylesheet from lib/pdfjs-dist/web/pdf_viewer.css */
-const viewerCss = css`
-.textLayer {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    overflow: hidden;
-    opacity: 0.2;
-    line-height: 1.0;
-}
-
-    .textLayer > span {
-        color: transparent;
-        position: absolute;
-        white-space: pre;
-        cursor: text;
-        -webkit-transform-origin: 0% 0%;
-                transform-origin: 0% 0%;
-    }
-
-    .textLayer .highlight {
-        margin: -1px;
-        padding: 1px;
-
-        background-color: rgb(180, 0, 170);
-        border-radius: 4px;
-    }
-
-        .textLayer .highlight.begin {
-            border-radius: 4px 0px 0px 4px;
-        }
-
-        .textLayer .highlight.end {
-            border-radius: 0px 4px 4px 0px;
-        }
-
-        .textLayer .highlight.middle {
-            border-radius: 0px;
-        }
-
-        .textLayer .highlight.selected {
-            background-color: rgb(0, 100, 0);
-        }
-
-    .textLayer ::-moz-selection { background: rgb(0,0,255); }
-
-    .textLayer ::selection { background: rgb(0,0,255); }
-
-    .textLayer .endOfContent {
-        display: block;
-        position: absolute;
-        left: 0px;
-        top: 100%;
-        right: 0px;
-        bottom: 0px;
-        z-index: -1;
-        cursor: default;
-        -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-                user-select: none;
-    }
-
-    .textLayer .endOfContent.active {
-        top: 0px;
-    }
-
-
-.annotationLayer section {
-    position: absolute;
-}
-
-.annotationLayer .linkAnnotation > a,
-.annotationLayer .buttonWidgetAnnotation.pushButton > a {
-  position: absolute;
-  font-size: 1em;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.annotationLayer .linkAnnotation > a:hover,
-.annotationLayer .buttonWidgetAnnotation.pushButton > a:hover {
-  opacity: 0.2;
-  background: #ff0;
-  box-shadow: 0px 2px 10px #ff0;
-}
-
-.annotationLayer .textAnnotation img {
-  position: absolute;
-  cursor: pointer;
-}
-
-.annotationLayer .textWidgetAnnotation input,
-.annotationLayer .textWidgetAnnotation textarea,
-.annotationLayer .choiceWidgetAnnotation select,
-.annotationLayer .buttonWidgetAnnotation.checkBox input,
-.annotationLayer .buttonWidgetAnnotation.radioButton input {
-  background-color: rgba(0, 54, 255, 0.13);
-  border: 1px solid transparent;
-  box-sizing: border-box;
-  font-size: 9px;
-  height: 100%;
-  margin: 0;
-  padding: 0 3px;
-  vertical-align: top;
-  width: 100%;
-}
-
-.annotationLayer .choiceWidgetAnnotation select option {
-  padding: 0;
-}
-
-.annotationLayer .buttonWidgetAnnotation.radioButton input {
-  border-radius: 50%;
-}
-
-.annotationLayer .textWidgetAnnotation textarea {
-  font: message-box;
-  font-size: 9px;
-  resize: none;
-}
-
-.annotationLayer .textWidgetAnnotation input[disabled],
-.annotationLayer .textWidgetAnnotation textarea[disabled],
-.annotationLayer .choiceWidgetAnnotation select[disabled],
-.annotationLayer .buttonWidgetAnnotation.checkBox input[disabled],
-.annotationLayer .buttonWidgetAnnotation.radioButton input[disabled] {
-  background: none;
-  border: 1px solid transparent;
-  cursor: not-allowed;
-}
-
-.annotationLayer .textWidgetAnnotation input:hover,
-.annotationLayer .textWidgetAnnotation textarea:hover,
-.annotationLayer .choiceWidgetAnnotation select:hover,
-.annotationLayer .buttonWidgetAnnotation.checkBox input:hover,
-.annotationLayer .buttonWidgetAnnotation.radioButton input:hover {
-  border: 1px solid #000;
-}
-
-.annotationLayer .textWidgetAnnotation input:focus,
-.annotationLayer .textWidgetAnnotation textarea:focus,
-.annotationLayer .choiceWidgetAnnotation select:focus {
-  background: none;
-  border: 1px solid transparent;
-}
-
-.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:before,
-.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:after,
-.annotationLayer .buttonWidgetAnnotation.radioButton input:checked:before {
-  background-color: #000;
-  content: '';
-  display: block;
-  position: absolute;
-}
-
-.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:before,
-.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:after {
-  height: 80%;
-  left: 45%;
-  width: 1px;
-}
-
-.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:before {
-  -webkit-transform: rotate(45deg);
-          transform: rotate(45deg);
-}
-
-.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:after {
-  -webkit-transform: rotate(-45deg);
-          transform: rotate(-45deg);
-}
-
-.annotationLayer .buttonWidgetAnnotation.radioButton input:checked:before {
-  border-radius: 50%;
-  height: 50%;
-  left: 30%;
-  top: 20%;
-  width: 50%;
-}
-
-.annotationLayer .textWidgetAnnotation input.comb {
-  font-family: monospace;
-  padding-left: 2px;
-  padding-right: 0;
-}
-
-.annotationLayer .textWidgetAnnotation input.comb:focus {
-  /*
-   * Letter spacing is placed on the right side of each character. Hence, the
-   * letter spacing of the last character may be placed outside the visible
-   * area, causing horizontal scrolling. We avoid this by extending the width
-   * when the element has focus and revert this when it loses focus.
-   */
-  width: 115%;
-}
-
-.annotationLayer .buttonWidgetAnnotation.checkBox input,
-.annotationLayer .buttonWidgetAnnotation.radioButton input {
-  -webkit-appearance: none;
-     -moz-appearance: none;
-          appearance: none;
-  padding: 0;
-}
-
-.annotationLayer .popupWrapper {
-  position: absolute;
-  width: 20em;
-}
-
-.annotationLayer .popup {
-  position: absolute;
-  z-index: 200;
-  max-width: 20em;
-  background-color: #FFFF99;
-  box-shadow: 0px 2px 5px #333;
-  border-radius: 2px;
-  padding: 0.6em;
-  margin-left: 5px;
-  cursor: pointer;
-  font: message-box;
-  word-wrap: break-word;
-}
-
-.annotationLayer .popup h1 {
-  font-size: 1em;
-  border-bottom: 1px solid #000000;
-  margin: 0;
-  padding-bottom: 0.2em;
-}
-
-.annotationLayer .popup p {
-  margin: 0;
-  padding-top: 0.2em;
-}
-
-.annotationLayer .highlightAnnotation,
-.annotationLayer .underlineAnnotation,
-.annotationLayer .squigglyAnnotation,
-.annotationLayer .strikeoutAnnotation,
-.annotationLayer .lineAnnotation svg line,
-.annotationLayer .squareAnnotation svg rect,
-.annotationLayer .circleAnnotation svg ellipse,
-.annotationLayer .polylineAnnotation svg polyline,
-.annotationLayer .polygonAnnotation svg polygon,
-.annotationLayer .inkAnnotation svg polyline,
-.annotationLayer .stampAnnotation,
-.annotationLayer .fileAttachmentAnnotation {
-  cursor: pointer;
-}
-
-.pdfViewer .canvasWrapper {
-  overflow: hidden;
-}
-
-.pdfViewer .page {
-  direction: ltr;
-  width: 816px;
-  height: 1056px;
-  margin: 1px auto -8px auto;
-  position: relative;
-  overflow: visible;
-  border: 9px solid transparent;
-  background-clip: content-box;
-  -o-border-image: url(images/shadow.png) 9 9 repeat;
-     border-image: url(images/shadow.png) 9 9 repeat;
-  background-color: white;
-}
-
-.pdfViewer.removePageBorders .page {
-  margin: 0px auto 10px auto;
-  border: none;
-}
-
-.pdfViewer.singlePageView {
-  display: inline-block;
-}
-
-.pdfViewer.singlePageView .page {
-  margin: 0;
-  border: none;
-}
-
-.pdfViewer.scrollHorizontal, .pdfViewer.scrollWrapped, .spread {
-  margin-left: 3.5px;
-  margin-right: 3.5px;
-  text-align: center;
-}
-
-.pdfViewer.scrollHorizontal, .spread {
-  white-space: nowrap;
-}
-
-.pdfViewer.removePageBorders,
-.pdfViewer.scrollHorizontal .spread,
-.pdfViewer.scrollWrapped .spread {
-  margin-left: 0;
-  margin-right: 0;
-}
-
-.spread .page,
-.pdfViewer.scrollHorizontal .page,
-.pdfViewer.scrollWrapped .page,
-.pdfViewer.scrollHorizontal .spread,
-.pdfViewer.scrollWrapped .spread {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-.spread .page,
-.pdfViewer.scrollHorizontal .page,
-.pdfViewer.scrollWrapped .page {
-  margin-left: -3.5px;
-  margin-right: -3.5px;
-}
-
-.pdfViewer.removePageBorders .spread .page,
-.pdfViewer.removePageBorders.scrollHorizontal .page,
-.pdfViewer.removePageBorders.scrollWrapped .page {
-  margin-left: 5px;
-  margin-right: 5px;
-}
-
-.pdfViewer .page canvas {
-  margin: 0;
-  display: block;
-}
-
-.pdfViewer .page canvas[hidden] {
-  display: none;
-}
-
-.pdfViewer .page .loadingIcon {
-  position: absolute;
-  display: block;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: url('images/loading-icon.gif') center no-repeat;
-}
-
-.pdfPresentationMode .pdfViewer {
-  margin-left: 0;
-  margin-right: 0;
-}
-
-.pdfPresentationMode .pdfViewer .page,
-.pdfPresentationMode .pdfViewer .spread {
-  display: block;
-}
-
-.pdfPresentationMode .pdfViewer .page,
-.pdfPresentationMode .pdfViewer.removePageBorders .page {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.pdfPresentationMode:-ms-fullscreen .pdfViewer .page {
-  margin-bottom: 100% !important;
-}
-
-.pdfPresentationMode:-webkit-full-screen .pdfViewer .page {
-  margin-bottom: 100%;
-  border: 0;
-}
-
-.pdfPresentationMode:-moz-full-screen .pdfViewer .page {
-  margin-bottom: 100%;
-  border: 0;
-}
-
-.pdfPresentationMode:fullscreen .pdfViewer .page {
-  margin-bottom: 100%;
-  border: 0;
 }`;
+
+/** Event detail for 'pdf-document-loading' event */
+export interface PdfLoadingEventArgs {
+
+    /** URI of the document about to be loaded. */
+    src: string;
+}
+
+/** Event detail for 'pdf-document-loaded' event */
+export interface PdfLoadedEventArgs {
+
+    /** URI of the document successfully loaded. */
+    src: string;
+
+    /** Number of pages in the document. */
+    pages: number;
+}
+
+/** Event detail for 'pdf-document-error' event */
+export interface PdfLoadErrorEventArgs {
+
+    /** URI of the document that couldn't be loaded. */
+    src: string;
+
+    /** Error message. */
+    message: string;
+
+    /** Name of error. */
+    name: string;
+}
 
 /** Don't allow zooming out past this minimum. */
 const minZoom = .5;
 
+/** Promote simple searches (just strings) to the arrarys of regular expressions the page find supports.
+ * @param input A string, a regular expression, or an array of either.
+ * @generator yeilds regular expressions. */
 function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
     if (typeof input === 'string')
         yield new RegExp(input, 'gi');
@@ -456,6 +80,11 @@ function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
 
 /** Render a PDF document a canvas elements in the page.
  *  No UI provided, just display of the document.
+ *  Lifecycle events:
+ *      pdf-document-loading: when the source has changed and loading is starting.
+ *      pdf-document-loaded: once the document has been successfully loaded (pages may still be rendering).
+ *      pdf-document-error: if an error is encountered while loading the document.      
+ *      
  *  Each page is rendered by <pdf-viewer-page>, which uses an IntersectionObserver to only render visible pages.
  *  Styles: 
  *       --pdf-background, default: #888, content behind pages.
@@ -472,7 +101,7 @@ function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
 @customElement('pdf-viewer-document')
 export class PdfViewerDocument extends LitElement {
 
-    static get styles() { return [styles, viewerCss]; }
+    static get styles() { return [styles]; }
 
     render() {
         // Convert the number of pages into an array of [1,..., pages]
@@ -493,8 +122,7 @@ export class PdfViewerDocument extends LitElement {
             page=${p}
             zoom=${this._zoom}
             .highlight=${hl}
-            .pdf=${pdf}></pdf-viewer-page>`) : html`
-        <paper-spinner id="spinner" active></paper-spinner>`}
+            .pdf=${pdf}></pdf-viewer-page>`) : ''}
     </div>
 </div>`;
     }
@@ -563,7 +191,7 @@ export class PdfViewerDocument extends LitElement {
         if (!src || !navigator.onLine)
             return;
 
-        this.dispatchEvent(new CustomEvent<{ src: string }>(
+        this.dispatchEvent(new CustomEvent<PdfLoadingEventArgs>(
             'pdf-document-loading', {
                 detail: { src: src },
             }));
@@ -571,18 +199,35 @@ export class PdfViewerDocument extends LitElement {
         // Loaded via <script> tag, create shortcut to access PDF.js exports.
         const pdfjsLib = await pdfApi();
 
-        const pdf = await pdfjsLib.getDocument(src);
-        this.pdfProxy = pdf;
+        try {
+            const pdf = await pdfjsLib.getDocument(src);
 
-        if (src !== this.src)
-            return; // fake cancel
+            if (src !== this.src)
+                return; // src changed while we were loading
 
-        this.pages = this.pdfProxy.numPages;
+            this.pdfProxy = pdf;
+            this.pages = this.pdfProxy.numPages;
 
-        this.dispatchEvent(new CustomEvent<{ src: string }>(
-            'pdf-document-loaded', {
-                detail: { src: src },
-            }));
+            this.dispatchEvent(new CustomEvent<PdfLoadedEventArgs>(
+                'pdf-document-loaded', {
+                    detail: {
+                        src: src,
+                        pages: this.pages
+                    },
+                }));
+        }
+        catch (x) {
+            this.dispatchEvent(new CustomEvent<PdfLoadErrorEventArgs>(
+                'pdf-document-error', {
+                    detail: {
+                        src: src,
+                        message: x.message,
+                        name: x.name
+                    },
+                }));
+
+            throw x;
+        }
     }
 
     async updateFit(fitMode: 'height' | 'width') {
@@ -599,7 +244,7 @@ export class PdfViewerDocument extends LitElement {
         const viewport = page.getViewport({ scale: 1 });
         const rect = this.container.getBoundingClientRect();
         // Avoid errors if element is allowed to stretch past screen boundary
-        const width = Math.min(screen.width, window.innerWidth, rect.width); 
+        const width = Math.min(screen.width, window.innerWidth, rect.width);
 
         const zoom = (width - 24) / viewport.width;
         if (zoom === this._zoom)
@@ -618,7 +263,7 @@ export class PdfViewerDocument extends LitElement {
         // Avoid errors if element is allowed to stretch past screen boundary
         const height = Math.min(screen.height, window.innerHeight, rect.height);
 
-        const zoom =(height - 24) / viewport.height;
+        const zoom = (height - 24) / viewport.height;
         if (zoom === this._zoom)
             return;
 

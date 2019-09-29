@@ -4,12 +4,12 @@
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-import { LitElement, html, css, property, customElement, query } from '../../lib/lit-element/lit-element.js';
+import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
 import './pdf-viewer-document.js';
 import '../../lib/@polymer/paper-icon-button/paper-icon-button.js';
 import '../../lib/@polymer/iron-icons/iron-icons.js';
 import '../../lib/@polymer/paper-tooltip/paper-tooltip.js';
-import { ifDefined } from '../../lib/lit-html/directives/if-defined.js';
+import '../../lib/@polymer/paper-spinner/paper-spinner.js';
 const styles = css `
 :host {
     display: flex;
@@ -23,17 +23,12 @@ pdf-viewer-document {
 }
 
 #actions {
-    display: none;
     position: absolute;
     bottom: 0;
     right: 24px;
     width: min-content;
     height: min-content;
 }
-
-    #actions.loaded {
-        display: block;
-    }
 
 paper-icon-button {
     --iron-icon-height: 20px;
@@ -55,43 +50,84 @@ paper-icon-button {
             0 1px 10px 0 rgba(0, 0, 0, 0.12),
             0 2px 4px -1px rgba(0, 0, 0, 0.4);   
     }
-`;
+
+paper-spinner {
+    width: 100px;
+    height: 100px;
+}
+
+.center-overlay {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}`;
 let PdfViewer = class PdfViewer extends LitElement {
     static get styles() { return [styles]; }
+    renderActions(fitMode) {
+        const fitIcon = fitMode === 'width' ? 'fullscreen-exit' : 'fullscreen';
+        return html `
+<slot name="actions">
+    <div id="actions">
+        <paper-icon-button icon="launch" id="actionExpand"
+            @tap=${this.expandFull}></paper-icon-button>
+        <paper-tooltip for="actionExpand" position="left" animation-delay="0">
+            Open document in a new tab
+        </paper-tooltip>
+
+        <paper-icon-button icon=${fitIcon} id="actionFit"
+            @tap=${this.toggleFit}></paper-icon-button>
+        <paper-tooltip for="actionFit" position="left" animation-delay="0">
+            Fit to one page ${fitMode === 'height' ? 'width' : 'height'}
+        </paper-tooltip>
+
+        <paper-icon-button icon="zoom-in" id="actionZoomIn"
+            @tap=${this.zoomin}></paper-icon-button>
+        <paper-tooltip for="actionZoomIn" position="left" animation-delay="0">
+            Zoom In
+        </paper-tooltip>
+
+        <paper-icon-button icon="zoom-out" id="actionZoomOut"
+            @tap=${this.zoomout}></paper-icon-button>
+        <paper-tooltip for="actionZoomOut" position="left" animation-delay="0">
+            Zoom Out
+        </paper-tooltip>
+    </div>
+</slot>`;
+    }
+    renderError(error) {
+        return html `
+<div class="center-overlay">
+    <slot name="error">
+        <div id="error">
+            <h2>${this.loadError.name || 'Exception'}</h2>
+            ${this.loadError.message}
+        </div>
+    </slot>
+</div>`;
+    }
+    renderSpinner() {
+        return html `
+<div class="center-overlay">
+    <slot name="loader">
+        <paper-spinner active></paper-spinner>
+    </slot>
+</div>`;
+    }
     render() {
-        const fitIcon = this.fitMode === 'width' ? 'fullscreen-exit' : 'fullscreen';
         return html `
 <pdf-viewer-document
     .src=${this.src} 
     .highlight=${this.highlight}
-    @pdf-document-loading=${e => this.loaded = false}
-    @pdf-document-loaded=${e => this.loaded = true}></pdf-viewer-document>
+    @pdf-document-loading=${this.pdfLoading}
+    @pdf-document-loaded=${this.pdfLoaded}
+    @pdf-document-error=${this.pdfLoadError}></pdf-viewer-document>
 
-<div id="actions" class=${ifDefined(this.loaded ? 'loaded' : undefined)}>
-    <paper-icon-button icon="launch" id="actionExpand"
-        @tap=${this.expandFull}></paper-icon-button>
-    <paper-tooltip for="actionExpand" position="left" animation-delay="0">
-        Open document in a new tab
-    </paper-tooltip>
-
-    <paper-icon-button icon=${fitIcon} id="actionFit"
-        @tap=${this.toggleFit}></paper-icon-button>
-    <paper-tooltip for="actionFit" position="left" animation-delay="0">
-        Fit to one page ${this.fitMode === 'height' ? 'width' : 'height'}
-    </paper-tooltip>
-
-    <paper-icon-button icon="zoom-in" id="actionZoomIn"
-        @tap=${this.zoomin}></paper-icon-button>
-    <paper-tooltip for="actionZoomIn" position="left" animation-delay="0">
-        Zoom In
-    </paper-tooltip>
-
-    <paper-icon-button icon="zoom-out" id="actionZoomOut"
-        @tap=${this.zoomout}></paper-icon-button>
-    <paper-tooltip for="actionZoomOut" position="left" animation-delay="0">
-        Zoom Out
-    </paper-tooltip>
-</div>`;
+${this.loaded ?
+            this.renderActions(this.fitMode) :
+            this.loadError ?
+                this.renderError(this.loadError) :
+                this.renderSpinner()}`;
     }
     expandFull() {
         const target = `${this.src}#toolbar=1`;
@@ -110,6 +146,16 @@ let PdfViewer = class PdfViewer extends LitElement {
         this.fitMode = 'custom';
         this.pdfDocument.zoomout();
     }
+    pdfLoading(e) {
+        this.loadError = undefined;
+        this.loaded = false;
+    }
+    pdfLoaded(e) {
+        this.loaded = true;
+    }
+    pdfLoadError(e) {
+        this.loadError = e.detail;
+    }
 };
 __decorate([
     property()
@@ -124,8 +170,32 @@ __decorate([
     property()
 ], PdfViewer.prototype, "loaded", void 0);
 __decorate([
+    property()
+], PdfViewer.prototype, "loadError", void 0);
+__decorate([
     query('pdf-viewer-document')
 ], PdfViewer.prototype, "pdfDocument", void 0);
+__decorate([
+    eventOptions({ capture: false, passive: true })
+], PdfViewer.prototype, "expandFull", null);
+__decorate([
+    eventOptions({ capture: false, passive: true })
+], PdfViewer.prototype, "toggleFit", null);
+__decorate([
+    eventOptions({ capture: false, passive: true })
+], PdfViewer.prototype, "zoomin", null);
+__decorate([
+    eventOptions({ capture: false, passive: true })
+], PdfViewer.prototype, "zoomout", null);
+__decorate([
+    eventOptions({ capture: false, passive: true })
+], PdfViewer.prototype, "pdfLoading", null);
+__decorate([
+    eventOptions({ capture: false, passive: true })
+], PdfViewer.prototype, "pdfLoaded", null);
+__decorate([
+    eventOptions({ capture: false, passive: true })
+], PdfViewer.prototype, "pdfLoadError", null);
 PdfViewer = __decorate([
     customElement('pdf-viewer')
 ], PdfViewer);
