@@ -1,5 +1,6 @@
 ﻿import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
 import './pdf-viewer-document.js';
+import './plain-text.js';
 import { PdfViewerDocument, PdfLoadErrorEventArgs, PdfLoadedEventArgs, PdfLoadingEventArgs } from './pdf-viewer-document';
 import '../../lib/@polymer/paper-icon-button/paper-icon-button.js';
 import '../../lib/@polymer/iron-icons/iron-icons.js';
@@ -57,6 +58,16 @@ paper-spinner {
     top: 20%;
     left: 50%;
     transform: translateX(-50%);
+}
+
+.fallback {
+    padding: var(--pdf-page-margin, 12px);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
 }`;
 
 /** Render a PDF with basic UI.
@@ -104,6 +115,20 @@ export class PdfViewer extends LitElement {
     }
 
     private renderError(error: PdfLoadErrorEventArgs) {
+        if (this.fallback)
+            return html`
+<div class="fallback">
+    <slot name="error">
+        <div>
+            <h2>${this.loadError.name || 'Exception'}</h2>
+            ${this.loadError.message}
+        </div>
+    </slot>
+    <plain-text
+        .text=${this.fallback}
+        .highlight=${this.highlight}></plain-text>
+</div>`;
+
         return html`
 <div class="center-overlay">
     <slot name="error">
@@ -112,7 +137,7 @@ export class PdfViewer extends LitElement {
             ${this.loadError.message}
         </div>
     </slot>
-</div>`;
+</div>`
     }
 
     private renderSpinner() {
@@ -135,10 +160,10 @@ export class PdfViewer extends LitElement {
     @pdf-document-error=${this.pdfLoadError}></pdf-viewer-document>
 
 ${this.loaded ?
-    this.renderActions(this.fitMode) :
-    this.loadError ?
-        this.renderError(this.loadError) :
-        this.renderSpinner()}`;
+                this.renderActions(this.fitMode) :
+                this.loadError ?
+                    this.renderError(this.loadError) :
+                    this.renderSpinner()}`;
     }
 
     /** URL of the PDF file to display. */
@@ -148,6 +173,10 @@ ${this.loaded ?
     /** Terms to highlight */
     @property()
     highlight: string | RegExp | (string | RegExp)[];
+
+    /** Text content to render if the PDF fails to load. */
+    @property()
+    fallback: string;
 
     @property()
     private fitMode: 'height' | 'width' | 'custom';

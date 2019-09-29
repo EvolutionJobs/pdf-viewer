@@ -4,7 +4,7 @@
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-import { LitElement, html, css, property, customElement, query } from '../../lib/lit-element/lit-element.js';
+import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
 import { pdfApi } from './pdf-utility.js';
 const styles = css `
 :host {
@@ -37,22 +37,7 @@ const styles = css `
         background-size: 400% 400%;
         background-image: linear-gradient(to right, #fff 0%, #ccc 50%, #fff 100%);
         animation: animatedBackground 9s ease infinite;
-    }
-
-.term {
-    border-radius: 2px;
-    padding: 0 2px;
-    margin-left: -2px;
-}
-
-    .term.term-0 { background: var(--pdf-colour-1, #f00); }
-    .term.term-1 { background: var(--pdf-colour-2, #0f0); }
-    .term.term-2 { background: var(--pdf-colour-3, #00f); }
-    .term.term-3 { background: var(--pdf-colour-4, #fd0); }
-    .term.term-4 { background: var(--pdf-colour-5, #0fd); }
-    .term.term-5 { background: var(--pdf-colour-6, #d0f); }
-    .term.term-6 { background: var(--pdf-colour-7, #df0); }
-    .term.term-7 { background: var(--pdf-colour-8, #0df); }`;
+    }`;
 const viewerCss = css `
 .textLayer {
     position: absolute;
@@ -120,7 +105,22 @@ const viewerCss = css `
     .textLayer .endOfContent.active {
         top: 0px;
     }`;
-const termMaxOrdinal = 8;
+export const termStyle = css `
+.term {
+    border-radius: 2px;
+    padding: 0 2px;
+    margin-left: -2px;
+}
+
+    .term.term-0 { background: var(--pdf-colour-1, #f00); }
+    .term.term-1 { background: var(--pdf-colour-2, #0f0); }
+    .term.term-2 { background: var(--pdf-colour-3, #00f); }
+    .term.term-3 { background: var(--pdf-colour-4, #fd0); }
+    .term.term-4 { background: var(--pdf-colour-5, #0fd); }
+    .term.term-5 { background: var(--pdf-colour-6, #d0f); }
+    .term.term-6 { background: var(--pdf-colour-7, #df0); }
+    .term.term-7 { background: var(--pdf-colour-8, #0df); }`;
+export const termMaxOrdinal = 8;
 function clearCanvas(canvas) {
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -176,10 +176,10 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         this.pageNumber = 1;
         this.zoom = 1;
     }
-    static get styles() { return [styles, viewerCss]; }
+    static get styles() { return [styles, viewerCss, termStyle]; }
     render() {
         this.debouncePdfRender();
-        return html `<canvas width="612" height="792"></canvas><div class="textLayer"></div></div>`;
+        return html `<canvas width="612" height="792"></canvas><div class="textLayer" @mouseup=${this.textSelected}></div></div>`;
     }
     get shown() { return this._shown; }
     ;
@@ -259,6 +259,17 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         }
         console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }
+    textSelected(e) {
+        const selection = document.getSelection();
+        if (!selection)
+            return;
+        const selectedText = selection.toString();
+        if (selectedText && selectedText.length > 0)
+            this.dispatchEvent(new CustomEvent('text-selection', {
+                detail: { selection: selectedText, page: this.pageNumber },
+                bubbles: true
+            }));
+    }
 };
 __decorate([
     property({ type: Number, attribute: 'page' })
@@ -278,6 +289,9 @@ __decorate([
 __decorate([
     query('canvas')
 ], PdfViewerPage.prototype, "canvas", void 0);
+__decorate([
+    eventOptions({ capture: false })
+], PdfViewerPage.prototype, "textSelected", null);
 PdfViewerPage = __decorate([
     customElement('pdf-viewer-page')
 ], PdfViewerPage);

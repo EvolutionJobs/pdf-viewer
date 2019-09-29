@@ -65,7 +65,7 @@ const minZoom = .5;
 /** Promote simple searches (just strings) to the arrarys of regular expressions the page find supports.
  * @param input A string, a regular expression, or an array of either.
  * @generator yeilds regular expressions. */
-function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
+export function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
     if (typeof input === 'string')
         yield new RegExp(input, 'gi');
     else if (input instanceof RegExp)
@@ -187,14 +187,18 @@ export class PdfViewerDocument extends LitElement {
 
         // Clear the pages and document proxy
         this.pages = undefined;
-        this.pdfProxy = undefined;
+
+        if (this.pdfProxy) {
+            this.pdfProxy.destroy();
+            this.pdfProxy = undefined;
+        }
 
         if (!src || !navigator.onLine)
             return;
 
         this.dispatchEvent(new CustomEvent<PdfLoadingEventArgs>(
             'pdf-document-loading', {
-                detail: { src: src },
+                detail: { src: src }, bubbles: true
             }));
 
         // Loaded via <script> tag, create shortcut to access PDF.js exports.
@@ -214,7 +218,7 @@ export class PdfViewerDocument extends LitElement {
                     detail: {
                         src: src,
                         pages: this.pages
-                    },
+                    }, bubbles: true
                 }));
         }
         catch (x) {
@@ -224,7 +228,7 @@ export class PdfViewerDocument extends LitElement {
                         src: src,
                         message: x.message,
                         name: x.name
-                    },
+                    }, bubbles: true
                 }));
 
             throw x;

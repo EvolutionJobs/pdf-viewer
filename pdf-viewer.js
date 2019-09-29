@@ -6,6 +6,7 @@
 };
 import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
 import './pdf-viewer-document.js';
+import './plain-text.js';
 import '../../lib/@polymer/paper-icon-button/paper-icon-button.js';
 import '../../lib/@polymer/iron-icons/iron-icons.js';
 import '../../lib/@polymer/paper-tooltip/paper-tooltip.js';
@@ -61,6 +62,16 @@ paper-spinner {
     top: 20%;
     left: 50%;
     transform: translateX(-50%);
+}
+
+.fallback {
+    padding: var(--pdf-page-margin, 12px);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
 }`;
 let PdfViewer = class PdfViewer extends LitElement {
     static get styles() { return [styles]; }
@@ -96,6 +107,19 @@ let PdfViewer = class PdfViewer extends LitElement {
 </slot>`;
     }
     renderError(error) {
+        if (this.fallback)
+            return html `
+<div class="fallback">
+    <slot name="error">
+        <div>
+            <h2>${this.loadError.name || 'Exception'}</h2>
+            ${this.loadError.message}
+        </div>
+    </slot>
+    <plain-text
+        .text=${this.fallback}
+        .highlight=${this.highlight}></plain-text>
+</div>`;
         return html `
 <div class="center-overlay">
     <slot name="error">
@@ -163,6 +187,9 @@ __decorate([
 __decorate([
     property()
 ], PdfViewer.prototype, "highlight", void 0);
+__decorate([
+    property()
+], PdfViewer.prototype, "fallback", void 0);
 __decorate([
     property()
 ], PdfViewer.prototype, "fitMode", void 0);

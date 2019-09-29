@@ -32,7 +32,7 @@ const styles = css `
     padding-top: var(--pdf-page-margin, 12px);
 }`;
 const minZoom = .5;
-function* normaliseSearchTerms(input) {
+export function* normaliseSearchTerms(input) {
     if (typeof input === 'string')
         yield new RegExp(input, 'gi');
     else if (input instanceof RegExp)
@@ -87,11 +87,14 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         if (!this.container)
             return;
         this.pages = undefined;
-        this.pdfProxy = undefined;
+        if (this.pdfProxy) {
+            this.pdfProxy.destroy();
+            this.pdfProxy = undefined;
+        }
         if (!src || !navigator.onLine)
             return;
         this.dispatchEvent(new CustomEvent('pdf-document-loading', {
-            detail: { src: src },
+            detail: { src: src }, bubbles: true
         }));
         const pdfjsLib = await pdfApi();
         try {
@@ -104,7 +107,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
                 detail: {
                     src: src,
                     pages: this.pages
-                },
+                }, bubbles: true
             }));
         }
         catch (x) {
@@ -113,7 +116,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
                     src: src,
                     message: x.message,
                     name: x.name
-                },
+                }, bubbles: true
             }));
             throw x;
         }

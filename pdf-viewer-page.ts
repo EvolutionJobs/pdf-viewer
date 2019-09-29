@@ -33,22 +33,7 @@ const styles = css`
         background-size: 400% 400%;
         background-image: linear-gradient(to right, #fff 0%, #ccc 50%, #fff 100%);
         animation: animatedBackground 9s ease infinite;
-    }
-
-.term {
-    border-radius: 2px;
-    padding: 0 2px;
-    margin-left: -2px;
-}
-
-    .term.term-0 { background: var(--pdf-colour-1, #f00); }
-    .term.term-1 { background: var(--pdf-colour-2, #0f0); }
-    .term.term-2 { background: var(--pdf-colour-3, #00f); }
-    .term.term-3 { background: var(--pdf-colour-4, #fd0); }
-    .term.term-4 { background: var(--pdf-colour-5, #0fd); }
-    .term.term-5 { background: var(--pdf-colour-6, #d0f); }
-    .term.term-6 { background: var(--pdf-colour-7, #df0); }
-    .term.term-7 { background: var(--pdf-colour-8, #0df); }`;
+    }`;
 
 /** Import into constructible stylesheet from lib/pdfjs-dist/web/pdf_viewer.css
  *  These styles are set by pdf.js in the text overlay component. */
@@ -120,8 +105,25 @@ const viewerCss = css`
         top: 0px;
     }`;
 
+/** Styles for the term highlights */
+export const termStyle = css`
+.term {
+    border-radius: 2px;
+    padding: 0 2px;
+    margin-left: -2px;
+}
+
+    .term.term-0 { background: var(--pdf-colour-1, #f00); }
+    .term.term-1 { background: var(--pdf-colour-2, #0f0); }
+    .term.term-2 { background: var(--pdf-colour-3, #00f); }
+    .term.term-3 { background: var(--pdf-colour-4, #fd0); }
+    .term.term-4 { background: var(--pdf-colour-5, #0fd); }
+    .term.term-5 { background: var(--pdf-colour-6, #d0f); }
+    .term.term-6 { background: var(--pdf-colour-7, #df0); }
+    .term.term-7 { background: var(--pdf-colour-8, #0df); }`;
+
 /** Hold the max number of terms that have defined styles, more than this loops. */
-const termMaxOrdinal = 8;
+export const termMaxOrdinal = 8;
 
 /** Represent the parent document this is a page of */
 export interface ParentPdfDocument {
@@ -131,6 +133,17 @@ export interface ParentPdfDocument {
     /** The source the PDF was loaded from. */
     source: string;
 }
+
+/** Event detail fired when selecting text */
+export interface PdfTextSelectionEventArgs {
+
+    /** The text selected. */
+    selection: string;
+
+    /** The page the text was selected on. */
+    page: number;
+}
+
 
 /** Clear the content of a canvas element
  * @param canvas The canvas to clear */
@@ -216,12 +229,12 @@ function injectHighlight(element: ChildNode, highlight: RegExp, ordinal: number)
 @customElement('pdf-viewer-page')
 export class PdfViewerPage extends LitElement {
 
-    static get styles() { return [styles, viewerCss]; }
+    static get styles() { return [styles, viewerCss, termStyle]; }
 
     render() {
         this.debouncePdfRender(); // Queue a rerender of the PDF to canvas
 
-        return html`<canvas width="612" height="792"></canvas><div class="textLayer"></div></div>`;
+        return html`<canvas width="612" height="792"></canvas><div class="textLayer" @mouseup=${this.textSelected}></div></div>`;
     }
 
     /** The page number to display.
@@ -353,5 +366,19 @@ export class PdfViewerPage extends LitElement {
         }
 
         console.timeEnd(`📃 Rendering page ${pageNumber}`);
+    }
+
+    @eventOptions({ capture: false })
+    private textSelected(e: Event) {
+        const selection = document.getSelection();
+        if (!selection)
+            return;
+
+        const selectedText = selection.toString();
+        if (selectedText && selectedText.length > 0)
+            this.dispatchEvent(new CustomEvent<PdfTextSelectionEventArgs>('text-selection', {
+                detail: { selection: selectedText, page: this.pageNumber },
+                bubbles: true
+            }));
     }
 }
