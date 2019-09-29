@@ -58,7 +58,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
             document: this.pdfProxy,
             source: this._src
         } : undefined;
-        const hl = [...normaliseSearchTerms(this.highlight)];
+        const hl = this.highlight ? [...normaliseSearchTerms(this.highlight)] : undefined;
         return html `
 <div id="container">
     <div id="viewer" class="viewer">

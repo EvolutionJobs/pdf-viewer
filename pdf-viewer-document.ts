@@ -113,7 +113,7 @@ export class PdfViewerDocument extends LitElement {
             source: this._src
         } : undefined;
 
-        const hl = [...normaliseSearchTerms(this.highlight)];
+        const hl = this.highlight ? [...normaliseSearchTerms(this.highlight)] : undefined;
 
         return html`
 <div id="container">

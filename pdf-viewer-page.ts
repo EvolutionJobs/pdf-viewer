@@ -333,12 +333,14 @@ export class PdfViewerPage extends LitElement {
                 textDivs: [],
             });
 
-            // Wait a frame for the DOM to update 
-            await new Promise(requestAnimationFrame);
+            if (highlight && highlight.length > 0) {
+                // Wait a frame for the DOM to update 
+                await new Promise(requestAnimationFrame);
 
-            // Apply transparent highlights to the text overlay
-            for (let i = 0; i < highlight.length; i++)
-                injectHighlight(textLayer, highlight[i], i);
+                // Apply transparent highlights to the text overlay
+                for (let i = 0; i < highlight.length; i++)
+                    injectHighlight(textLayer, highlight[i], i);
+            }
         }
         catch (ex) {
             const context = view.getContext('2d');
@@ -348,7 +350,7 @@ export class PdfViewerPage extends LitElement {
         finally {
             this.loading = undefined; // Always clear the loading promise
             this.classList.remove('loading');
-        } 
+        }
 
         console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }

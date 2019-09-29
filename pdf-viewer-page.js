@@ -242,9 +242,11 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
                 viewport,
                 textDivs: [],
             });
-            await new Promise(requestAnimationFrame);
-            for (let i = 0; i < highlight.length; i++)
-                injectHighlight(textLayer, highlight[i], i);
+            if (highlight && highlight.length > 0) {
+                await new Promise(requestAnimationFrame);
+                for (let i = 0; i < highlight.length; i++)
+                    injectHighlight(textLayer, highlight[i], i);
+            }
         }
         catch (ex) {
             const context = view.getContext('2d');
