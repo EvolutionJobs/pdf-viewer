@@ -10,7 +10,6 @@ const styles = css `
 :host {
     position: relative;
     display: inline-block;
-    background: var(--pdf-paper, #fff);
     overflow: hidden;
     min-height: 200px;
     margin: var(--pdf-page-margin, 12px);
@@ -22,6 +21,23 @@ const styles = css `
         rgba(0, 0, 0, 0.12) 0px 1px 10px 0px, 
         rgba(0, 0, 0, 0.4) 0px 2px 4px -1px;
 }
+
+@keyframes animatedBackground {
+    0% { background-position: 0% 50% }
+    50% { background-position: 100% 50% }
+    100% { background-position: 0% 50% }
+}
+
+    :host(:not(.loading)) {
+        background: var(--pdf-paper, #fff);
+    }
+
+    :host(.loading) {
+        background-position: 0px 0px;
+        background-size: 400% 400%;
+        background-image: linear-gradient(to right, #fff 0%, #ccc 50%, #fff 100%);
+        animation: animatedBackground 9s ease infinite;
+    }
 
 .term {
     border-radius: 2px;
@@ -163,9 +179,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
     static get styles() { return [styles, viewerCss]; }
     render() {
         this.debouncePdfRender();
-        return html `
-<canvas width="612" height="792"></canvas>
-<div class="textLayer"></div></div>`;
+        return html `<canvas width="612" height="792"></canvas><div class="textLayer"></div></div>`;
     }
     get shown() { return this._shown; }
     ;
@@ -206,6 +220,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
     async renderPage(view, textLayer, pageNumber, highlight) {
         clearCanvas(view);
         clearDom(textLayer);
+        this.classList.add('loading');
         if (!this.api)
             this.api = await pdfApi();
         console.time(`📃 Rendering page ${pageNumber}`);
@@ -238,6 +253,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         }
         finally {
             this.loading = undefined;
+            this.classList.remove('loading');
         }
         console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }

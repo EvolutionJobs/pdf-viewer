@@ -6,7 +6,6 @@ const styles = css`
 :host {
     position: relative;
     display: inline-block;
-    background: var(--pdf-paper, #fff);
     overflow: hidden;
     min-height: 200px;
     margin: var(--pdf-page-margin, 12px);
@@ -18,6 +17,23 @@ const styles = css`
         rgba(0, 0, 0, 0.12) 0px 1px 10px 0px, 
         rgba(0, 0, 0, 0.4) 0px 2px 4px -1px;
 }
+
+@keyframes animatedBackground {
+    0% { background-position: 0% 50% }
+    50% { background-position: 100% 50% }
+    100% { background-position: 0% 50% }
+}
+
+    :host(:not(.loading)) {
+        background: var(--pdf-paper, #fff);
+    }
+
+    :host(.loading) {
+        background-position: 0px 0px;
+        background-size: 400% 400%;
+        background-image: linear-gradient(to right, #fff 0%, #ccc 50%, #fff 100%);
+        animation: animatedBackground 9s ease infinite;
+    }
 
 .term {
     border-radius: 2px;
@@ -205,9 +221,7 @@ export class PdfViewerPage extends LitElement {
     render() {
         this.debouncePdfRender(); // Queue a rerender of the PDF to canvas
 
-        return html`
-<canvas width="612" height="792"></canvas>
-<div class="textLayer"></div></div>`;
+        return html`<canvas width="612" height="792"></canvas><div class="textLayer"></div></div>`;
     }
 
     /** The page number to display.
@@ -288,6 +302,8 @@ export class PdfViewerPage extends LitElement {
         clearCanvas(view);      // clear the canvas
         clearDom(textLayer);    // clear the text overlay
 
+        this.classList.add('loading');
+
         if (!this.api) this.api = await pdfApi(); // First time await getting the API
 
         console.time(`📃 Rendering page ${pageNumber}`);
@@ -329,7 +345,10 @@ export class PdfViewerPage extends LitElement {
             context.clearRect(0, 0, view.width, view.height);
             throw ex;
         }
-        finally { this.loading = undefined; } // Always clear the loading promise
+        finally {
+            this.loading = undefined; // Always clear the loading promise
+            this.classList.remove('loading');
+        } 
 
         console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }
