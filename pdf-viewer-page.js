@@ -61,7 +61,7 @@ const viewerCss = css `
     right: 0;
     bottom: 0;
     overflow: hidden;
-    opacity: 0.2;
+    opacity: var(--pdf-highlight-opacity, 0.4);
     line-height: 1.0;
 }
 

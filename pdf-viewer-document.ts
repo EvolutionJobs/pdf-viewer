@@ -97,6 +97,7 @@ function* normaliseSearchTerms(input: string | RegExp | (string | RegExp)[]) {
  *       --pdf-colour-6, default: #d0f, colour for 6th term highlight.
  *       --pdf-colour-7, default: #df0, colour for 7th term highlight.
  *       --pdf-colour-8, default: #0df, colour for 8th term highlight. (subsequent terms repeat)
+ *       --pdf-highlight-opacity, default .4, highlights appear over text with this opacity.
  * */
 @customElement('pdf-viewer-document')
 export class PdfViewerDocument extends LitElement {
