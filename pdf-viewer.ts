@@ -107,7 +107,7 @@ export class PdfViewer extends LitElement {
         return html`
 <div class="center-overlay">
     <slot name="error">
-        <div id="error">
+        <div>
             <h2>${this.loadError.name || 'Exception'}</h2>
             ${this.loadError.message}
         </div>
