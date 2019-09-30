@@ -64,6 +64,10 @@ paper-spinner {
     transform: translateX(-50%);
 }
 
+h4 {
+    color: var(--pdf-paper, #fff);
+}
+
 .fallback {
     padding: var(--pdf-page-margin, 12px);
     position: absolute;
@@ -116,6 +120,7 @@ let PdfViewer = class PdfViewer extends LitElement {
             ${this.loadError.message}
         </div>
     </slot>
+    <h4>Plain text fallback:</h4>
     <plain-text
         .text=${this.fallback}
         .highlight=${this.highlight}></plain-text>

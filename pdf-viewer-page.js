@@ -37,7 +37,11 @@ const styles = css `
         background-size: 400% 400%;
         background-image: linear-gradient(to right, #fff 0%, #ccc 50%, #fff 100%);
         animation: animatedBackground 9s ease infinite;
-    }`;
+    }
+
+.term {
+    margin-left: -2px;
+}`;
 const viewerCss = css `
 .textLayer {
     position: absolute;
@@ -109,7 +113,6 @@ export const termStyle = css `
 .term {
     border-radius: 2px;
     padding: 0 2px;
-    margin-left: -2px;
 }
 
     .term.term-0 { background: var(--pdf-colour-1, #f00); }
@@ -267,7 +270,8 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         if (selectedText && selectedText.length > 0)
             this.dispatchEvent(new CustomEvent('text-selection', {
                 detail: { selection: selectedText, page: this.pageNumber },
-                bubbles: true
+                bubbles: true,
+                composed: true
             }));
     }
 };

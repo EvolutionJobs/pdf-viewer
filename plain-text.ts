@@ -151,7 +151,8 @@ class PlainText extends LitElement {
         if (selectedText && selectedText.length > 0)
             this.dispatchEvent(new CustomEvent<PdfTextSelectionEventArgs>('text-selection', {
                 detail: { selection: selectedText, page: -1 },
-                bubbles: true
+                bubbles: true,
+                composed: true
             }));
     }
 }

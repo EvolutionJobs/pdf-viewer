@@ -94,7 +94,9 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         if (!src || !navigator.onLine)
             return;
         this.dispatchEvent(new CustomEvent('pdf-document-loading', {
-            detail: { src: src }, bubbles: true
+            detail: { src: src },
+            bubbles: true,
+            composed: true
         }));
         const pdfjsLib = await pdfApi();
         try {
@@ -107,7 +109,9 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
                 detail: {
                     src: src,
                     pages: this.pages
-                }, bubbles: true
+                },
+                bubbles: true,
+                composed: true
             }));
         }
         catch (x) {
@@ -116,7 +120,9 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
                     src: src,
                     message: x.message,
                     name: x.name
-                }, bubbles: true
+                },
+                bubbles: true,
+                composed: true
             }));
             throw x;
         }

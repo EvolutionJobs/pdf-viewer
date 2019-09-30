@@ -198,7 +198,9 @@ export class PdfViewerDocument extends LitElement {
 
         this.dispatchEvent(new CustomEvent<PdfLoadingEventArgs>(
             'pdf-document-loading', {
-                detail: { src: src }, bubbles: true
+                detail: { src: src },
+                bubbles: true,
+                composed: true
             }));
 
         // Loaded via <script> tag, create shortcut to access PDF.js exports.
@@ -218,7 +220,9 @@ export class PdfViewerDocument extends LitElement {
                     detail: {
                         src: src,
                         pages: this.pages
-                    }, bubbles: true
+                    },
+                    bubbles: true,
+                    composed: true
                 }));
         }
         catch (x) {
@@ -228,7 +232,9 @@ export class PdfViewerDocument extends LitElement {
                         src: src,
                         message: x.message,
                         name: x.name
-                    }, bubbles: true
+                    },
+                    bubbles: true,
+                    composed: true
                 }));
 
             throw x;

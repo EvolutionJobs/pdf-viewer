@@ -33,7 +33,11 @@ const styles = css`
         background-size: 400% 400%;
         background-image: linear-gradient(to right, #fff 0%, #ccc 50%, #fff 100%);
         animation: animatedBackground 9s ease infinite;
-    }`;
+    }
+
+.term {
+    margin-left: -2px;
+}`;
 
 /** Import into constructible stylesheet from lib/pdfjs-dist/web/pdf_viewer.css
  *  These styles are set by pdf.js in the text overlay component. */
@@ -110,7 +114,6 @@ export const termStyle = css`
 .term {
     border-radius: 2px;
     padding: 0 2px;
-    margin-left: -2px;
 }
 
     .term.term-0 { background: var(--pdf-colour-1, #f00); }
@@ -378,7 +381,8 @@ export class PdfViewerPage extends LitElement {
         if (selectedText && selectedText.length > 0)
             this.dispatchEvent(new CustomEvent<PdfTextSelectionEventArgs>('text-selection', {
                 detail: { selection: selectedText, page: this.pageNumber },
-                bubbles: true
+                bubbles: true,
+                composed: true
             }));
     }
 }
