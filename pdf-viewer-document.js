@@ -5,7 +5,7 @@
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import { LitElement, html, css, property, customElement, query } from '../../lib/lit-element/lit-element.js';
-import { pdfApi } from './pdf-utility.js';
+import { pdfApi, firstPageSize } from './pdf-utility.js';
 import './pdf-viewer-page.js';
 const styles = css `
 :host {
@@ -66,6 +66,7 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         <pdf-viewer-page
             page=${p}
             zoom=${this._zoom}
+            .pageSize=${this.pageSize}
             .highlight=${hl}
             .pdf=${pdf}></pdf-viewer-page>`) : ''}
     </div>
@@ -83,16 +84,34 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         this._src = s;
         this.srcChanged(this._src);
     }
+    get zoom() { return this._zoom; }
+    ;
+    set zoom(z) {
+        if (this._zoom === z)
+            return;
+        if (this.pdfProxy)
+            firstPageSize(this.pdfProxy, z).then(p => {
+                this.pageSize = p;
+                this._zoom = z;
+                this.requestUpdate('zoom');
+            });
+        else {
+            this._zoom = z;
+            this.requestUpdate('zoom');
+        }
+    }
     async srcChanged(src) {
         if (!this.container)
             return;
         this.pages = undefined;
+        this.pageSize = undefined;
         if (this.pdfProxy) {
             this.pdfProxy.destroy();
             this.pdfProxy = undefined;
         }
         if (!src || !navigator.onLine)
             return;
+        console.time(`📃 Loaded PDF ${src}`);
         this.dispatchEvent(new CustomEvent('pdf-document-loading', {
             detail: { src: src },
             bubbles: true,
@@ -100,10 +119,12 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         }));
         const pdfjsLib = await pdfApi();
         try {
-            const pdf = await pdfjsLib.getDocument(src);
+            const loadingTask = pdfjsLib.getDocument(src);
+            const pdf = await loadingTask.promise;
             if (src !== this.src)
                 return;
             this.pdfProxy = pdf;
+            this.pageSize = await firstPageSize(this.pdfProxy, this._zoom);
             this.pages = this.pdfProxy.numPages;
             this.dispatchEvent(new CustomEvent('pdf-document-loaded', {
                 detail: {
@@ -126,6 +147,9 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
             }));
             throw x;
         }
+        finally {
+            console.timeEnd(`📃 Loaded PDF ${src}`);
+        }
     }
     async updateFit(fitMode) {
         if (fitMode === 'width')
@@ -135,31 +159,33 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
     }
     async fitWidth() {
         this.fit = 'width';
-        const page = await this.pdfProxy.getPage(1);
-        const viewport = page.getViewport({ scale: 1 });
+        const viewport = await firstPageSize(this.pdfProxy, 1);
         const rect = this.container.getBoundingClientRect();
         const width = Math.min(screen.width, window.innerWidth, rect.width);
         const zoom = (width - 24) / viewport.width;
         if (zoom === this._zoom)
             return;
+        this.pageSize = await firstPageSize(this.pdfProxy, zoom);
         this._zoom = zoom;
+        this.requestUpdate('zoom');
     }
     async fitHeight() {
         this.fit = 'height';
-        const page = await this.pdfProxy.getPage(1);
-        const viewport = page.getViewport({ scale: 1 });
+        const viewport = await firstPageSize(this.pdfProxy, 1);
         const rect = this.container.getBoundingClientRect();
         const height = Math.min(screen.height, window.innerHeight, rect.height);
         const zoom = (height - 24) / viewport.height;
         if (zoom === this._zoom)
             return;
+        this.pageSize = await firstPageSize(this.pdfProxy, zoom);
         this._zoom = zoom;
+        this.requestUpdate('zoom');
     }
     zoomin() {
-        this._zoom = this._zoom * this.zoomRatio;
+        this.zoom = this._zoom * this.zoomRatio;
     }
     zoomout() {
-        this._zoom = Math.max(minZoom, this._zoom / this.zoomRatio);
+        this.zoom = Math.max(minZoom, this._zoom / this.zoomRatio);
     }
 };
 __decorate([
@@ -176,7 +202,7 @@ __decorate([
 ], PdfViewerDocument.prototype, "zoomRatio", void 0);
 __decorate([
     property({ type: Number })
-], PdfViewerDocument.prototype, "_zoom", void 0);
+], PdfViewerDocument.prototype, "zoom", null);
 __decorate([
     property()
 ], PdfViewerDocument.prototype, "highlight", void 0);

@@ -209,7 +209,11 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
     static get styles() { return [styles, viewerCss, termStyle]; }
     render() {
         this.debouncePdfRender();
-        return html `<canvas width="612" height="792"></canvas><div id="textWrapper" @mouseup=${this.textSelected}></div></div>`;
+        return html `<canvas width="0" height="0"></canvas><div id="textWrapper" @mouseup=${this.textSelected}></div></div>`;
+    }
+    set pageSize(p) {
+        this.style.width = `${p.width}px`;
+        this.style.height = `${p.height}px`;
     }
     get shown() { return this._shown; }
     ;
@@ -264,7 +268,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         this.classList.add('loading');
         if (!this.api)
             this.api = await pdfApi();
-        console.time(`📃 Rendering page ${renderKey} ${regexKey}`);
+        console.time(`📃 Rendered page ${renderKey} ${regexKey}`);
         try {
             const page = await this.pdf.document.getPage(pageNumber);
             const viewport = page.getViewport({ scale: this.zoom });
@@ -277,17 +281,19 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
                 const renderContext = {
                     canvasContext: context, viewport,
                 };
-                await page.render(renderContext);
+                const renderTask = page.render(renderContext);
+                await renderTask.promise;
                 const div = document.createElement('div');
                 div.className = 'textLayer';
                 const textContent = await page.getTextContent();
-                await this.api.renderTextLayer({
+                const renderTextTask = this.api.renderTextLayer({
                     enhanceTextSelection: true,
                     textContent,
                     container: div,
                     viewport,
                     textDivs: [],
                 });
+                await renderTextTask.promise;
                 this.textLayerContent = div;
                 this.lastRenderContent = renderKey;
             }
@@ -310,7 +316,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         finally {
             this.loading = undefined;
             this.classList.remove('loading');
-            console.timeEnd(`📃 Rendering page ${renderKey} ${regexKey}`);
+            console.timeEnd(`📃 Rendered page ${renderKey} ${regexKey}`);
         }
     }
     textSelected(e) {

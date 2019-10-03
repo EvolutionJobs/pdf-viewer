@@ -35,4 +35,12 @@ export async function pdfApi() {
     }
     return pdfApiReady;
 }
+export async function firstPageSize(pdf, zoom) {
+    const firstPage = await pdf.getPage(1);
+    const viewport = firstPage.getViewport({ scale: zoom });
+    return {
+        width: viewport.width,
+        height: viewport.height
+    };
+}
 //# sourceMappingURL=pdf-utility.js.map

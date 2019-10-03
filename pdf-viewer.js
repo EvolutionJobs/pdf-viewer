@@ -17,6 +17,7 @@ const styles = css `
     height: 100vh;
     overflow: hidden;
     position: relative;
+    --paper-spinner-stroke-width: 12px;
 }
 
 pdf-viewer-document {

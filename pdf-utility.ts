@@ -1,5 +1,11 @@
 ﻿import { PDFDocumentProxy, PDFRenderTask } from './pdf'; // Definitions only
 
+/** Size of PDF page */
+export interface PdfPageSize {
+    width: number;
+    height: number;
+}
+
 /** URI of the PDF JS library */
 const pdfApiUri = `lib/pdfjs-dist/build/pdf.min.js`;
 
@@ -59,4 +65,18 @@ export async function pdfApi(): Promise<any> {
     finally { pdfApiLoading = false; }
 
     return pdfApiReady;
+}
+
+/** Get the size of the first page.
+ * @param pdf The PDF document proxy.
+ * @param zoom The current zoom level.
+ * @returns The width and height in pixels. */
+export async function firstPageSize(pdf: PDFDocumentProxy, zoom: number): Promise<PdfPageSize> {
+    // Get the size of the first page and estimate rest from that
+    const firstPage = await pdf.getPage(1);
+    const viewport = firstPage.getViewport({ scale: zoom });
+    return {
+        width: viewport.width,
+        height: viewport.height
+    };
 }

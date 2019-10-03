@@ -1,6 +1,6 @@
 ﻿import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
 import { PDFDocumentProxy, PDFRenderTask } from './pdf'; // Definitions only
-import { pdfApi } from './pdf-utility.js';
+import { pdfApi, PdfPageSize } from './pdf-utility.js';
 
 const styles = css`
 :host {
@@ -274,7 +274,7 @@ export class PdfViewerPage extends LitElement {
     render() {
         this.debouncePdfRender(); // Queue a rerender of the PDF to canvas
 
-        return html`<canvas width="612" height="792"></canvas><div id="textWrapper" @mouseup=${this.textSelected}></div></div>`;
+        return html`<canvas width="0" height="0"></canvas><div id="textWrapper" @mouseup=${this.textSelected}></div></div>`;
     }
 
     /** The page number to display.
@@ -284,6 +284,12 @@ export class PdfViewerPage extends LitElement {
 
     @property({ type: Number })
     zoom: number = 1;
+
+    /** Optional estimate of page size based on first page */
+    set pageSize(p: PdfPageSize) {
+        this.style.width = `${p.width}px`;
+        this.style.height = `${p.height}px`;
+    }
 
     /** Parent PDF normalises the patterns to search for, this can't be passed as attribute. */
     @property()
@@ -387,7 +393,7 @@ export class PdfViewerPage extends LitElement {
 
         if (!this.api) this.api = await pdfApi(); // First time await getting the API
 
-        console.time(`📃 Rendering page ${renderKey} ${regexKey}`);
+        console.time(`📃 Rendered page ${renderKey} ${regexKey}`);
 
         try {
             // Get the page from the document
@@ -408,20 +414,22 @@ export class PdfViewerPage extends LitElement {
                     canvasContext: context, viewport,
                 };
 
-                await page.render(renderContext);
+                const renderTask = page.render(renderContext);
+                await renderTask.promise;
 
                 const div = document.createElement('div');
                 div.className = 'textLayer';
 
                 // Render the text overlay for selection and highlighting
                 const textContent = await page.getTextContent();
-                await this.api.renderTextLayer({
+                const renderTextTask = this.api.renderTextLayer({
                     enhanceTextSelection: true,
                     textContent,
                     container: div,
                     viewport,
                     textDivs: [],
                 });
+                await renderTextTask.promise;
 
                 // Cache the text layer in a property
                 this.textLayerContent = div;
@@ -450,7 +458,7 @@ export class PdfViewerPage extends LitElement {
         finally {
             this.loading = undefined; // Always clear the loading promise
             this.classList.remove('loading');
-            console.timeEnd(`📃 Rendering page ${renderKey} ${regexKey}`);
+            console.timeEnd(`📃 Rendered page ${renderKey} ${regexKey}`);
         }
     }
 
