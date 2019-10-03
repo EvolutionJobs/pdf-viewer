@@ -43,6 +43,15 @@ const styles = css `
     margin-left: -2px;
 }`;
 const viewerCss = css `
+#textWrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
 .textLayer {
     position: absolute;
     left: 0;
@@ -129,6 +138,8 @@ function clearCanvas(canvas) {
     context.clearRect(0, 0, canvas.width, canvas.height);
 }
 function clearDom(parent) {
+    if (!parent)
+        return;
     const kids = parent.childNodes;
     while (kids && kids.length > 0)
         parent.removeChild(kids[kids.length - 1]);
@@ -198,7 +209,7 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
     static get styles() { return [styles, viewerCss, termStyle]; }
     render() {
         this.debouncePdfRender();
-        return html `<canvas width="612" height="792"></canvas><div class="textLayer" @mouseup=${this.textSelected}></div></div>`;
+        return html `<canvas width="612" height="792"></canvas><div id="textWrapper" @mouseup=${this.textSelected}></div></div>`;
     }
     get shown() { return this._shown; }
     ;
@@ -237,13 +248,14 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         this.loading = this.renderPage(this.canvas, this.textLayer, this.pageNumber, this.highlight);
     }
     async renderPage(view, textLayer, pageNumber, highlight) {
-        const renderKey = `${this.pdf.source} ${this.zoom} ${this.pageNumber}`;
+        const renderKey = `${this.pdf.source} ${this.zoom} ${pageNumber}`;
         const regexKey = highlightKey(highlight);
         const renderChanged = renderKey !== this.lastRenderContent;
         const regexChanged = regexKey !== this.lastRenderHighlight;
         if (renderChanged) {
             clearCanvas(view);
             clearDom(textLayer);
+            this.textLayerContent = undefined;
         }
         else if (regexChanged)
             clearDom(textLayer);
@@ -266,30 +278,33 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
                     canvasContext: context, viewport,
                 };
                 await page.render(renderContext);
-            }
-            if (renderChanged || regexChanged) {
+                const div = document.createElement('div');
+                div.className = 'textLayer';
                 const textContent = await page.getTextContent();
                 await this.api.renderTextLayer({
                     enhanceTextSelection: true,
                     textContent,
-                    container: textLayer,
+                    container: div,
                     viewport,
                     textDivs: [],
                 });
-                if (highlight && highlight.length > 0) {
-                    await new Promise(requestAnimationFrame);
-                    for (let i = 0; i < highlight.length; i++)
-                        injectHighlight(textLayer, highlight[i], i);
-                }
-            }
-            if (renderChanged)
+                this.textLayerContent = div;
                 this.lastRenderContent = renderKey;
-            if (regexChanged)
+            }
+            if (regexChanged || renderChanged) {
+                const workingHL = this.textLayerContent.cloneNode(true);
+                if (highlight && highlight.length > 0) {
+                    for (let i = 0; i < highlight.length; i++)
+                        injectHighlight(workingHL, highlight[i], i);
+                }
+                textLayer.appendChild(workingHL);
                 this.lastRenderHighlight = regexKey;
+            }
         }
         catch (ex) {
             clearCanvas(view);
             clearDom(textLayer);
+            this.textLayerContent = undefined;
             throw ex;
         }
         finally {
@@ -324,7 +339,7 @@ __decorate([
     property()
 ], PdfViewerPage.prototype, "pdf", void 0);
 __decorate([
-    query('div')
+    query('#textWrapper')
 ], PdfViewerPage.prototype, "textLayer", void 0);
 __decorate([
     query('canvas')

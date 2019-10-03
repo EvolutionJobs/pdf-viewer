@@ -42,6 +42,15 @@ const styles = css`
 /** Import into constructible stylesheet from lib/pdfjs-dist/web/pdf_viewer.css
  *  These styles are set by pdf.js in the text overlay component. */
 const viewerCss = css`
+#textWrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
 .textLayer {
     position: absolute;
     left: 0;
@@ -147,7 +156,6 @@ export interface PdfTextSelectionEventArgs {
     page: number;
 }
 
-
 /** Clear the content of a canvas element
  * @param canvas The canvas to clear */
 function clearCanvas(canvas: HTMLCanvasElement) {
@@ -158,6 +166,9 @@ function clearCanvas(canvas: HTMLCanvasElement) {
 /** Clear the content of a DOM element
  * @param parent The element to clear */
 function clearDom(parent: HTMLElement) {
+    if (!parent)
+        return;
+
     const kids = parent.childNodes;
     while (kids && kids.length > 0)
         parent.removeChild(kids[kids.length - 1]);
@@ -227,6 +238,10 @@ function injectHighlight(element: ChildNode, highlight: RegExp, ordinal: number)
     }
 }
 
+/** Generate a key unique to the regexp collection.
+ *  This is used to identify when highlights change
+ *  @param input Collection of regexes to generate a hash for.
+ *  @returns The hash, no more than 8 chars. */
 function highlightKey(input: RegExp[]) {
     if (!input || !(input.length > 0))
         return '';
@@ -259,7 +274,7 @@ export class PdfViewerPage extends LitElement {
     render() {
         this.debouncePdfRender(); // Queue a rerender of the PDF to canvas
 
-        return html`<canvas width="612" height="792"></canvas><div class="textLayer" @mouseup=${this.textSelected}></div></div>`;
+        return html`<canvas width="612" height="792"></canvas><div id="textWrapper" @mouseup=${this.textSelected}></div></div>`;
     }
 
     /** The page number to display.
@@ -274,7 +289,7 @@ export class PdfViewerPage extends LitElement {
     @property()
     highlight: RegExp[];
 
-    _shown: boolean;
+    private _shown: boolean;
     get shown(): boolean { return this._shown; };
     set shown(s: boolean) {
         if (!s && !this._shown)
@@ -291,16 +306,26 @@ export class PdfViewerPage extends LitElement {
     @property()
     pdf: ParentPdfDocument;
 
-    @query('div')
+    @query('#textWrapper')
     private textLayer: HTMLDivElement;
 
     @query('canvas')
     private canvas: HTMLCanvasElement;
 
+    /** During render this is populated with the executing promise. */
     private loading: Promise<void>;
 
     /** The cached API used to render. */
     private api?: any;
+
+    /** Holds a string unique to the last render. If this matches a new render request the <canvas> and text layout DOM will be preserved */
+    private lastRenderContent: string;
+
+    /** Holds a string unique to the highlights. If this changes but nothing else does then we can avoid regenerating the DOM for the text layer. */
+    private lastRenderHighlight: string;
+
+    /** Holds the rendered overlay DOM before any highlighting is applied. */
+    private textLayerContent: HTMLDivElement;
 
     connectedCallback() {
         obs.observe(this);
@@ -335,13 +360,15 @@ export class PdfViewerPage extends LitElement {
         this.loading = this.renderPage(this.canvas, this.textLayer, this.pageNumber, this.highlight);
     }
 
-    private lastRenderContent: string;
-    private lastRenderHighlight: string;
-
+    /** Render a single PDF page to a <canvas> with a text overlay
+     * @param view The <canvas> to draw with the page.
+     * @param textLayer The text layer DOM to populate.
+     * @param pageNumber The number of the page.
+     * @param highlight Any highlight to apply. */
     private async renderPage(view: HTMLCanvasElement, textLayer: HTMLDivElement, pageNumber: number, highlight: RegExp[]) {
 
         // Properties can cause lit render that don't need to redraw the canvas, build a cache key of the PDF render inputs
-        const renderKey = `${this.pdf.source} ${this.zoom} ${this.pageNumber}`;
+        const renderKey = `${this.pdf.source} ${this.zoom} ${pageNumber}`;
         const regexKey = highlightKey(highlight); // Separate key for highlights
         const renderChanged = renderKey !== this.lastRenderContent;
         const regexChanged = regexKey !== this.lastRenderHighlight;
@@ -349,6 +376,7 @@ export class PdfViewerPage extends LitElement {
         if (renderChanged) {
             clearCanvas(view);      // clear the canvas and...
             clearDom(textLayer);    // clear the text overlay
+            this.textLayerContent = undefined; // clear the overlay cache
         }
         else if (regexChanged)
             clearDom(textLayer);    // just clear the text overlay
@@ -381,36 +409,42 @@ export class PdfViewerPage extends LitElement {
                 };
 
                 await page.render(renderContext);
-            }
 
-            // If source/zoom/page OR highlight changed redraw the text layer
-            if (renderChanged || regexChanged) {
+                const div = document.createElement('div');
+                div.className = 'textLayer';
+
                 // Render the text overlay for selection and highlighting
                 const textContent = await page.getTextContent();
                 await this.api.renderTextLayer({
                     enhanceTextSelection: true,
                     textContent,
-                    container: textLayer,
+                    container: div,
                     viewport,
                     textDivs: [],
                 });
 
-                if (highlight && highlight.length > 0) {
-                    // Wait a frame for the DOM to update 
-                    await new Promise(requestAnimationFrame);
-
-                    // Apply transparent highlights to the text overlay
-                    for (let i = 0; i < highlight.length; i++)
-                        injectHighlight(textLayer, highlight[i], i);
-                }
+                // Cache the text layer in a property
+                this.textLayerContent = div;
+                this.lastRenderContent = renderKey;
             }
 
-            if (renderChanged) this.lastRenderContent = renderKey;
-            if (regexChanged) this.lastRenderHighlight = regexKey;
+            if (regexChanged || renderChanged) {
+                // Clone the cached text layer, so highlights can be reapplied
+                const workingHL = this.textLayerContent.cloneNode(true) as HTMLDivElement;
+                if (highlight && highlight.length > 0) {
+                    // Apply transparent highlights to the text overlay
+                    for (let i = 0; i < highlight.length; i++)
+                        injectHighlight(workingHL, highlight[i], i);
+                }
+
+                textLayer.appendChild(workingHL);
+                this.lastRenderHighlight = regexKey;
+            }
         }
         catch (ex) {
             clearCanvas(view);      // clear the canvas and...
             clearDom(textLayer);    // clear the text overlay
+            this.textLayerContent = undefined; // clear the overlay cache
             throw ex;
         }
         finally {
