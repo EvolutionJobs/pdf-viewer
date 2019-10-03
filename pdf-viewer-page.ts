@@ -227,6 +227,28 @@ function injectHighlight(element: ChildNode, highlight: RegExp, ordinal: number)
     }
 }
 
+function highlightKey(input: RegExp[]) {
+    if (!input || !(input.length > 0))
+        return '';
+
+    let hash = 0;
+
+    for (const r of input) {
+        const str = r.toString();
+        for (let i = 0; i < str.length; i++)
+            hash = ((hash << 5) - hash + str.charCodeAt(i)) & 0xffffffff;
+    }
+
+    if (hash < 0)
+        hash *= -1;
+
+    const result: string = hash.toString(16);
+    if (result.length > 8)
+        return result.substring(result.length - 8);
+
+    return result;
+}
+
 /** Render a single page of a PDF.
  *  Only intended for use in <pdf-viewer-document>, this relies on document proxy references being passed and cannot generate its own. */
 @customElement('pdf-viewer-page')
@@ -313,62 +335,89 @@ export class PdfViewerPage extends LitElement {
         this.loading = this.renderPage(this.canvas, this.textLayer, this.pageNumber, this.highlight);
     }
 
+    private lastRenderContent: string;
+    private lastRenderHighlight: string;
+
     private async renderPage(view: HTMLCanvasElement, textLayer: HTMLDivElement, pageNumber: number, highlight: RegExp[]) {
 
-        clearCanvas(view);      // clear the canvas
-        clearDom(textLayer);    // clear the text overlay
+        // Properties can cause lit render that don't need to redraw the canvas, build a cache key of the PDF render inputs
+        const renderKey = `${this.pdf.source} ${this.zoom} ${this.pageNumber}`;
+        const regexKey = highlightKey(highlight); // Separate key for highlights
+        const renderChanged = renderKey !== this.lastRenderContent;
+        const regexChanged = regexKey !== this.lastRenderHighlight;
+
+        if (renderChanged) {
+            clearCanvas(view);      // clear the canvas and...
+            clearDom(textLayer);    // clear the text overlay
+        }
+        else if (regexChanged)
+            clearDom(textLayer);    // just clear the text overlay
+        else
+            return; // No change to render
 
         this.classList.add('loading');
 
         if (!this.api) this.api = await pdfApi(); // First time await getting the API
 
-        console.time(`📃 Rendering page ${pageNumber}`);
+        console.time(`📃 Rendering page ${renderKey} ${regexKey}`);
 
         try {
             // Get the page from the document
             const page = await this.pdf.document.getPage(pageNumber);
-
-            // Render the page to a canvas image
             const viewport = page.getViewport({ scale: this.zoom });
-            view.width = viewport.width;
-            view.height = viewport.height;
-            const context = view.getContext('2d');
-            const renderContext = {
-                canvasContext: context, viewport,
-            };
 
-            await page.render(renderContext);
+            // If source/zoom/page changed redraw the canvas
+            if (renderChanged) {
+                // Set the size of this control to match the viewport
+                this.style.width = `${viewport.width}px`;
+                this.style.height = `${viewport.height}px`;
 
-            // Render the text overlay for selection and highlighting
-            const textContent = await page.getTextContent();
-            await this.api.renderTextLayer({
-                enhanceTextSelection: true,
-                textContent,
-                container: textLayer,
-                viewport,
-                textDivs: [],
-            });
+                // Render the page to a canvas image
+                view.width = viewport.width;
+                view.height = viewport.height;
+                const context = view.getContext('2d');
+                const renderContext = {
+                    canvasContext: context, viewport,
+                };
 
-            if (highlight && highlight.length > 0) {
-                // Wait a frame for the DOM to update 
-                await new Promise(requestAnimationFrame);
-
-                // Apply transparent highlights to the text overlay
-                for (let i = 0; i < highlight.length; i++)
-                    injectHighlight(textLayer, highlight[i], i);
+                await page.render(renderContext);
             }
+
+            // If source/zoom/page OR highlight changed redraw the text layer
+            if (renderChanged || regexChanged) {
+                // Render the text overlay for selection and highlighting
+                const textContent = await page.getTextContent();
+                await this.api.renderTextLayer({
+                    enhanceTextSelection: true,
+                    textContent,
+                    container: textLayer,
+                    viewport,
+                    textDivs: [],
+                });
+
+                if (highlight && highlight.length > 0) {
+                    // Wait a frame for the DOM to update 
+                    await new Promise(requestAnimationFrame);
+
+                    // Apply transparent highlights to the text overlay
+                    for (let i = 0; i < highlight.length; i++)
+                        injectHighlight(textLayer, highlight[i], i);
+                }
+            }
+
+            if (renderChanged) this.lastRenderContent = renderKey;
+            if (regexChanged) this.lastRenderHighlight = regexKey;
         }
         catch (ex) {
-            const context = view.getContext('2d');
-            context.clearRect(0, 0, view.width, view.height);
+            clearCanvas(view);      // clear the canvas and...
+            clearDom(textLayer);    // clear the text overlay
             throw ex;
         }
         finally {
             this.loading = undefined; // Always clear the loading promise
             this.classList.remove('loading');
+            console.timeEnd(`📃 Rendering page ${renderKey} ${regexKey}`);
         }
-
-        console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }
 
     @eventOptions({ capture: false })

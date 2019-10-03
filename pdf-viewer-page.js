@@ -173,6 +173,22 @@ function injectHighlight(element, highlight, ordinal) {
             injectHighlight(child, highlight, ordinal);
     }
 }
+function highlightKey(input) {
+    if (!input || !(input.length > 0))
+        return '';
+    let hash = 0;
+    for (const r of input) {
+        const str = r.toString();
+        for (let i = 0; i < str.length; i++)
+            hash = ((hash << 5) - hash + str.charCodeAt(i)) & 0xffffffff;
+    }
+    if (hash < 0)
+        hash *= -1;
+    const result = hash.toString(16);
+    if (result.length > 8)
+        return result.substring(result.length - 8);
+    return result;
+}
 let PdfViewerPage = class PdfViewerPage extends LitElement {
     constructor() {
         super(...arguments);
@@ -221,46 +237,66 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         this.loading = this.renderPage(this.canvas, this.textLayer, this.pageNumber, this.highlight);
     }
     async renderPage(view, textLayer, pageNumber, highlight) {
-        clearCanvas(view);
-        clearDom(textLayer);
+        const renderKey = `${this.pdf.source} ${this.zoom} ${this.pageNumber}`;
+        const regexKey = highlightKey(highlight);
+        const renderChanged = renderKey !== this.lastRenderContent;
+        const regexChanged = regexKey !== this.lastRenderHighlight;
+        if (renderChanged) {
+            clearCanvas(view);
+            clearDom(textLayer);
+        }
+        else if (regexChanged)
+            clearDom(textLayer);
+        else
+            return;
         this.classList.add('loading');
         if (!this.api)
             this.api = await pdfApi();
-        console.time(`📃 Rendering page ${pageNumber}`);
+        console.time(`📃 Rendering page ${renderKey} ${regexKey}`);
         try {
             const page = await this.pdf.document.getPage(pageNumber);
             const viewport = page.getViewport({ scale: this.zoom });
-            view.width = viewport.width;
-            view.height = viewport.height;
-            const context = view.getContext('2d');
-            const renderContext = {
-                canvasContext: context, viewport,
-            };
-            await page.render(renderContext);
-            const textContent = await page.getTextContent();
-            await this.api.renderTextLayer({
-                enhanceTextSelection: true,
-                textContent,
-                container: textLayer,
-                viewport,
-                textDivs: [],
-            });
-            if (highlight && highlight.length > 0) {
-                await new Promise(requestAnimationFrame);
-                for (let i = 0; i < highlight.length; i++)
-                    injectHighlight(textLayer, highlight[i], i);
+            if (renderChanged) {
+                this.style.width = `${viewport.width}px`;
+                this.style.height = `${viewport.height}px`;
+                view.width = viewport.width;
+                view.height = viewport.height;
+                const context = view.getContext('2d');
+                const renderContext = {
+                    canvasContext: context, viewport,
+                };
+                await page.render(renderContext);
             }
+            if (renderChanged || regexChanged) {
+                const textContent = await page.getTextContent();
+                await this.api.renderTextLayer({
+                    enhanceTextSelection: true,
+                    textContent,
+                    container: textLayer,
+                    viewport,
+                    textDivs: [],
+                });
+                if (highlight && highlight.length > 0) {
+                    await new Promise(requestAnimationFrame);
+                    for (let i = 0; i < highlight.length; i++)
+                        injectHighlight(textLayer, highlight[i], i);
+                }
+            }
+            if (renderChanged)
+                this.lastRenderContent = renderKey;
+            if (regexChanged)
+                this.lastRenderHighlight = regexKey;
         }
         catch (ex) {
-            const context = view.getContext('2d');
-            context.clearRect(0, 0, view.width, view.height);
+            clearCanvas(view);
+            clearDom(textLayer);
             throw ex;
         }
         finally {
             this.loading = undefined;
             this.classList.remove('loading');
+            console.timeEnd(`📃 Rendering page ${renderKey} ${regexKey}`);
         }
-        console.timeEnd(`📃 Rendering page ${pageNumber}`);
     }
     textSelected(e) {
         const selection = document.getSelection();
