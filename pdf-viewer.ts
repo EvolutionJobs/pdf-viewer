@@ -172,9 +172,19 @@ ${this.loaded ?
                     this.renderSpinner()}`;
     }
 
+    private _src: string;
+
     /** URL of the PDF file to display. */
     @property()
-    src: string;
+    get src(): string { return this._src; };
+    set src(s: string) {
+        if (this._src === s)
+            return;
+
+        this._src = s;
+        this.loaded = undefined;
+        this.loadError = undefined;
+    }
 
     /** Terms to highlight */
     @property()

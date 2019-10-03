@@ -159,6 +159,15 @@ ${this.loaded ?
                 this.renderError(this.loadError) :
                 this.renderSpinner()}`;
     }
+    get src() { return this._src; }
+    ;
+    set src(s) {
+        if (this._src === s)
+            return;
+        this._src = s;
+        this.loaded = undefined;
+        this.loadError = undefined;
+    }
     expandFull() {
         const target = `${this.src}#toolbar=1`;
         window.open(target, '_blank');
@@ -189,7 +198,7 @@ ${this.loaded ?
 };
 __decorate([
     property()
-], PdfViewer.prototype, "src", void 0);
+], PdfViewer.prototype, "src", null);
 __decorate([
     property()
 ], PdfViewer.prototype, "highlight", void 0);
