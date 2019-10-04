@@ -38,6 +38,9 @@ export async function pdfApi(): Promise<any> {
     if (pdfApiReady)
         return pdfApiReady;
 
+    if ((window as any).pdfjsLib)
+        return pdfApiReady = (window as any).pdfjsLib; // Loaded externally
+
     while (pdfApiLoading)
         await new Promise(requestAnimationFrame);
 

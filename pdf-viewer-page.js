@@ -268,7 +268,6 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         this.classList.add('loading');
         if (!this.api)
             this.api = await pdfApi();
-        console.time(`📃 Rendered page ${renderKey} ${regexKey}`);
         try {
             const page = await this.pdf.document.getPage(pageNumber);
             const viewport = page.getViewport({ scale: this.zoom });
@@ -316,7 +315,6 @@ let PdfViewerPage = class PdfViewerPage extends LitElement {
         finally {
             this.loading = undefined;
             this.classList.remove('loading');
-            console.timeEnd(`📃 Rendered page ${renderKey} ${regexKey}`);
         }
     }
     textSelected(e) {

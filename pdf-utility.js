@@ -15,6 +15,8 @@ function loadScript(uri) {
 export async function pdfApi() {
     if (pdfApiReady)
         return pdfApiReady;
+    if (window.pdfjsLib)
+        return pdfApiReady = window.pdfjsLib;
     while (pdfApiLoading)
         await new Promise(requestAnimationFrame);
     if (pdfApiReady)

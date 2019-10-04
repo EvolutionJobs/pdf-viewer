@@ -111,7 +111,6 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
         }
         if (!src || !navigator.onLine)
             return;
-        console.time(`📃 Loaded PDF ${src}`);
         this.dispatchEvent(new CustomEvent('pdf-document-loading', {
             detail: { src: src },
             bubbles: true,
@@ -146,9 +145,6 @@ let PdfViewerDocument = class PdfViewerDocument extends LitElement {
                 composed: true
             }));
             throw x;
-        }
-        finally {
-            console.timeEnd(`📃 Loaded PDF ${src}`);
         }
     }
     async updateFit(fitMode) {

@@ -393,7 +393,7 @@ export class PdfViewerPage extends LitElement {
 
         if (!this.api) this.api = await pdfApi(); // First time await getting the API
 
-        console.time(`📃 Rendered page ${renderKey} ${regexKey}`);
+        // console.time(`📃 Rendered page ${renderKey} ${regexKey}`);
 
         try {
             // Get the page from the document
@@ -458,7 +458,7 @@ export class PdfViewerPage extends LitElement {
         finally {
             this.loading = undefined; // Always clear the loading promise
             this.classList.remove('loading');
-            console.timeEnd(`📃 Rendered page ${renderKey} ${regexKey}`);
+            // console.timeEnd(`📃 Rendered page ${renderKey} ${regexKey}`);
         }
     }
 

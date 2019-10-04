@@ -220,7 +220,7 @@ export class PdfViewerDocument extends LitElement {
         if (!src || !navigator.onLine)
             return;
 
-        console.time(`📃 Loaded PDF ${src}`);
+        // console.time(`📃 Loaded PDF ${src}`);
         this.dispatchEvent(new CustomEvent<PdfLoadingEventArgs>(
             'pdf-document-loading', {
                 detail: { src: src },
@@ -270,9 +270,7 @@ export class PdfViewerDocument extends LitElement {
 
             throw x;
         }
-        finally {
-            console.timeEnd(`📃 Loaded PDF ${src}`);
-        }
+        // finally { console.timeEnd(`📃 Loaded PDF ${src}`); }
     }
 
     async updateFit(fitMode: 'height' | 'width') {
