@@ -1,4 +1,4 @@
-﻿import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
+﻿import { LitElement, html, css, property, customElement, query, eventOptions } from 'lit-element';
 import { PDFDocumentProxy, PDFRenderTask } from './pdf'; // Definitions only
 import { pdfApi, PdfPageSize, firstPageSize } from './pdf-utility.js';
 import './pdf-viewer-page.js';

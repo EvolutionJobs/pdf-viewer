@@ -1,11 +1,11 @@
-﻿import { LitElement, html, css, property, customElement, query, eventOptions } from '../../lib/lit-element/lit-element.js';
+﻿import { LitElement, html, css, property, customElement, query, eventOptions } from 'lit-element';
 import './pdf-viewer-document.js';
 import './plain-text.js';
 import { PdfViewerDocument, PdfLoadErrorEventArgs, PdfLoadedEventArgs, PdfLoadingEventArgs } from './pdf-viewer-document';
-import '../../lib/@polymer/paper-icon-button/paper-icon-button.js';
-import '../../lib/@polymer/iron-icons/iron-icons.js';
-import '../../lib/@polymer/paper-tooltip/paper-tooltip.js';
-import '../../lib/@polymer/paper-spinner/paper-spinner.js';
+import '@polymer/paper-icon-button';
+import '@polymer/iron-icons';
+import '@polymer/paper-tooltip';
+import '@polymer/paper-spinner';
 
 const styles = css`
 :host {
