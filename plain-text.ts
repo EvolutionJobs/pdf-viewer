@@ -1,4 +1,4 @@
-﻿import { LitElement, html, css, property, customElement, query, eventOptions, TemplateResult } from '../../lib/lit-element/lit-element.js';
+﻿import { LitElement, html, css, property, customElement, query, eventOptions, TemplateResult } from 'lit-element';
 import { termMaxOrdinal, termStyle, PdfTextSelectionEventArgs } from './pdf-viewer-page.js';
 import { normaliseSearchTerms } from './pdf-viewer-document.js';
 
