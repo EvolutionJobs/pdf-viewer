@@ -1,0 +1,24 @@
+{
+  "name": "@evolutionjobs/pdf-viewer",
+  "version": "1.0.0",
+  "description": "PDF custom element viewer that supports regular expressions for term highlighting",
+  "main": "pdf-viewer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EvolutionJobs/pdf-viewer.git"
+  },
+  "keywords": [
+    "pdf",
+    "lit",
+    "customelement"
+  ],
+  "author": "keith.henry@evolutionjobs.co.uk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/EvolutionJobs/pdf-viewer/issues"
+  },
+  "homepage": "https://github.com/EvolutionJobs/pdf-viewer#readme"
+}
