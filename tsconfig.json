@@ -1,0 +1,40 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": false,
+        "noEmitOnError": true,
+        "removeComments": true,
+        "experimentalDecorators": true,
+        "sourceMap": true,
+        "target": "esnext",
+        "lib": [
+            "es2017",
+            "dom",
+            "dom.iterable",
+            "esnext.asynciterable",
+            "webworker"
+        ],
+        "module": "esnext",
+        "strictNullChecks": false,
+        "jsx": "react",
+        "jsxFactory": "h",
+        "skipLibCheck": true,
+        "plugins": [
+            {
+                "name": "typescript-lit-html-plugin",
+                "tags": [
+                    "html",
+                    "svg",
+                    "raw"
+                ]
+            }
+        ],
+        "emitBOM": true,
+        "charset": "utf8"
+    },
+    "exclude": [
+        "node_modules",
+        "bin",
+        "lib"
+    ],
+    "compileOnSave": true
+}

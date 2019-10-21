@@ -1,6 +1,6 @@
 {
   "name": "@evolutionjobs/pdf-viewer",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "PDF custom element viewer that supports regular expressions for term highlighting",
   "main": "pdf-viewer.js",
   "scripts": {
@@ -20,5 +20,13 @@
   "bugs": {
     "url": "https://github.com/EvolutionJobs/pdf-viewer/issues"
   },
-  "homepage": "https://github.com/EvolutionJobs/pdf-viewer#readme"
+  "homepage": "https://github.com/EvolutionJobs/pdf-viewer#readme",
+  "dependencies": {
+    "@polymer/iron-icons": "^3.0.1",
+    "@polymer/paper-icon-button": "^3.0.2",
+    "@polymer/paper-spinner": "^3.0.2",
+    "@polymer/paper-tooltip": "^3.0.1",
+    "lit-element": "^2.2.1",
+    "pdfjs-dist": "^2.2.228"
+  }
 }
