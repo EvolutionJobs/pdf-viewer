@@ -7,10 +7,12 @@ export interface PdfPageSize {
 }
 
 /** URI of the PDF JS library */
-const pdfApiUri = `lib/pdfjs-dist/build/pdf.min.js`;
+// @ts-ignore: This property does exist, regardless of what TS thinks
+const pdfApiUri = `${import.meta.url}/../../pdfjs-dist/build/pdf.min.js`;
 
 /** URI of the PDF JS web worker */
-const pdfWorkerUri = `lib/pdfjs-dist/build/pdf.worker.min.js`;
+// @ts-ignore: This property does exist, regardless of what TS thinks
+const pdfWorkerUri = `${import.meta.url}/../../pdfjs-dist/build/pdf.worker.min.js`;
 
 /** Flag indicating that PDF library is currently being loaded, wait for it to . */
 let pdfApiLoading = false;
